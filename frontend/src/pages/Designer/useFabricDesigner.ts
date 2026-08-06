@@ -5,36 +5,42 @@ import {
   type ForwardedRef,
 } from "react";
 
-import { Canvas, FabricImage } from "fabric";
+import { Canvas, FabricImage, type FabricObject } from "fabric";
 
-import type { ShirtView } from "../../types/designer";
-import { shirtAssets } from "../../config/designer/shirtAssets";
-import { shirtSizes } from "../../config/designer/shirtSizes";
+import type { ProductView } from "../../types/designer";
+import type { ProductColor } from "../../types/productColor";
+import { shirtAssets } from "../../config/designer/productAssets";
+import { shirtSizes } from "../../config/designer/productSizes";
 
 export interface FabricDesignerHandle {
   addImage(file: File): Promise<void>;
 }
 
 export function useFabricDesigner(
-  currentView: ShirtView,
+  currentView: ProductView,
+  productColor: ProductColor,
   ref: ForwardedRef<FabricDesignerHandle>
 ) {
   const canvasElementRef = useRef<HTMLCanvasElement>(null);
-
   const canvasRef = useRef<Canvas | null>(null);
 
-  const previousViewRef = useRef<ShirtView>("front");
+  // Current shirt image
+  const shirtRef = useRef<FabricImage | null>(null);
 
-  // Save one Fabric JSON for each shirt side
-  const designsRef = useRef<Record<ShirtView, any | null>>({
-    front: null,
-    back: null,
-    left: null,
-    right: null,
+  // Save design objects for each side
+  const designsRef = useRef<
+    Record<ProductView, ReturnType<FabricObject["toObject"]>[]>
+  >({
+    front: [],
+    back: [],
+    left: [],
+    right: [],
   });
 
+  const previousViewRef = useRef<ProductView>("front");
+
   //--------------------------------------------------
-  // Create Fabric canvas once
+  // Create Fabric canvas ONCE
   //--------------------------------------------------
 
   useEffect(() => {
@@ -49,7 +55,7 @@ export function useFabricDesigner(
 
     canvasRef.current = canvas;
 
-    void loadView("front");
+    void loadShirt("front", productColor);
 
     return () => {
       canvas.dispose();
@@ -57,7 +63,7 @@ export function useFabricDesigner(
   }, []);
 
   //--------------------------------------------------
-  // Switch shirt side
+  // Change side
   //--------------------------------------------------
 
   useEffect(() => {
@@ -65,53 +71,90 @@ export function useFabricDesigner(
 
     if (currentView === previousViewRef.current) return;
 
-    void switchView(currentView);
+    void switchSide(currentView);
   }, [currentView]);
 
   //--------------------------------------------------
-  // Save current side and load next
+  // Change shirt color
   //--------------------------------------------------
 
-  async function switchView(view: ShirtView) {
-    const canvas = canvasRef.current!;
+  useEffect(() => {
+    if (!canvasRef.current) return;
 
-    const json = canvas.toJSON();
+    void updateShirtColor(currentView, productColor);
+  }, [productColor]);
 
-    json.objects = json.objects.filter(
-      (obj: any) => !obj.data?.isShirt
+  //--------------------------------------------------
+  // Save current design objects
+  //--------------------------------------------------
+
+  function saveCurrentDesign(side: ProductView) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const objects = canvas
+      .getObjects()
+      .filter((obj) => !(obj as any).data?.isShirt);
+
+    designsRef.current[side] = objects.map((obj) =>
+      obj.toObject(["data"])
     );
-
-    designsRef.current[previousViewRef.current] = json;
-
-    await loadView(view);
-
-    previousViewRef.current = view;
   }
 
   //--------------------------------------------------
-  // Load one shirt side
+  // Restore design objects
   //--------------------------------------------------
 
-  async function loadView(view: ShirtView) {
+  async function restoreDesign(side: ProductView) {
     const canvas = canvasRef.current;
-
     if (!canvas) return;
 
-    canvas.clear();
+    const objects = designsRef.current[side];
 
-    canvas.backgroundColor = "#e5e7eb";
+    for (const objectData of objects) {
+      if ((objectData as any).data?.isShirt) {
+        continue;
+      }
 
-    // Restore saved design first
-    const saved = designsRef.current[view];
+      if (objectData.type === "Image" && (objectData as any).src) {
+        const image = await FabricImage.fromURL(
+          (objectData as any).src
+        );
 
-    if (saved) {
-      await canvas.loadFromJSON(saved);
+        image.set({
+          left: objectData.left,
+          top: objectData.top,
+          scaleX: objectData.scaleX,
+          scaleY: objectData.scaleY,
+          angle: objectData.angle,
+          originX: objectData.originX,
+          originY: objectData.originY,
+        });
+
+        canvas.add(image);
+      }
     }
+  }
 
-    // Add shirt last
+  //--------------------------------------------------
+  // Load shirt image
+  //--------------------------------------------------
+
+  async function loadShirt(view: ProductView, color: ProductColor) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Remove old shirt
+    canvas.getObjects().forEach((obj) => {
+      if ((obj as any).data?.isShirt) {
+        canvas.remove(obj);
+      }
+    });
+
     const shirt = await FabricImage.fromURL(
-      shirtAssets.tshirt.white[view]
+      shirtAssets.tshirt[color][view]
     );
+
 
     shirt.scaleToWidth(shirtSizes[view]);
 
@@ -124,25 +167,63 @@ export function useFabricDesigner(
       evented: false,
     });
 
-    shirt.data = {
+    (shirt as any).data = {
       isShirt: true,
     };
 
-    canvas.add(shirt);
+    shirtRef.current = shirt;
 
-    // Shirt should stay behind everything
+    canvas.add(shirt);
     canvas.moveObjectTo(shirt, 0);
+    canvas.renderAll();
+  }
+
+  //--------------------------------------------------
+  // Switch side
+  //--------------------------------------------------
+
+  async function switchSide(view: ProductView) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Save previous side
+    saveCurrentDesign(previousViewRef.current);
+
+    // Remove all non-shirt objects
+    canvas.getObjects().forEach((obj) => {
+      if (!(obj as any).data?.isShirt) {
+        canvas.remove(obj);
+      }
+    });
+
+    // Load new shirt
+    await loadShirt(view, productColor);
+
+    // Restore new side design
+    await restoreDesign(view);
 
     canvas.renderAll();
+
+    previousViewRef.current = view;
+  }
+
+  //--------------------------------------------------
+  // Update shirt color only
+  //--------------------------------------------------
+
+  async function updateShirtColor(
+    view: ProductView,
+    color: ProductColor
+  ) {
+    await loadShirt(view, color);
   }
 
   //--------------------------------------------------
   // Upload image
   //--------------------------------------------------
 
-    async function addImage(file: File) {
+  async function addImage(file: File) {
     const canvas = canvasRef.current;
-
     if (!canvas) return;
 
     const reader = new FileReader();
@@ -170,7 +251,7 @@ export function useFabricDesigner(
   }
 
   //--------------------------------------------------
-  // Public API
+  // Expose API
   //--------------------------------------------------
 
   useImperativeHandle(ref, () => ({

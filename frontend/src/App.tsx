@@ -1,7 +1,5 @@
-import Designer from "./pages/Designer/Designer";
+import AppRoutes from "./routes/AppRoutes";
 
-function App() {
-  return <Designer />;
+export default function App() {
+  return <AppRoutes />;
 }
-
-export default App;
