@@ -1,4 +1,4 @@
-import ProductCard from "../../components/product/ProductCard";
+import ProductCard from "../../components/shop/ProductCard";
 import { products } from "../../data/products";
 
 export default function Shop() {

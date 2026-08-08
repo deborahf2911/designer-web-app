@@ -7,25 +7,28 @@ import {
 
 import { Canvas, FabricImage, type FabricObject } from "fabric";
 
-import type { ProductView } from "../../types/designer";
-import type { ProductColor } from "../../types/productColor";
-import { shirtAssets } from "../../config/designer/productAssets";
-import { shirtSizes } from "../../config/designer/productSizes";
+import type { ProductView } from "../../../types/designer";
+import type { ProductColor } from "../../../types/productColor";
+import { productAssets } from "../config/productAssets";
+import { productDisplay } from "../config/productDisplay";
+import type { Product } from "../../../types/product";
 
 export interface FabricDesignerHandle {
   addImage(file: File): Promise<void>;
+  deleteSelected(): void;
 }
 
 export function useFabricDesigner(
-  currentView: ProductView,
-  productColor: ProductColor,
-  ref: ForwardedRef<FabricDesignerHandle>
+    product: Product,
+    currentView: ProductView,
+    productColor: ProductColor,
+    ref: ForwardedRef<FabricDesignerHandle>
 ) {
   const canvasElementRef = useRef<HTMLCanvasElement>(null);
   const canvasRef = useRef<Canvas | null>(null);
 
-  // Current shirt image
-  const shirtRef = useRef<FabricImage | null>(null);
+  // Current product image
+  const productRef = useRef<FabricImage | null>(null);
 
   // Save design objects for each side
   const designsRef = useRef<
@@ -55,7 +58,7 @@ export function useFabricDesigner(
 
     canvasRef.current = canvas;
 
-    void loadShirt("front", productColor);
+    void loadProduct("front", productColor);
 
     return () => {
       canvas.dispose();
@@ -75,13 +78,13 @@ export function useFabricDesigner(
   }, [currentView]);
 
   //--------------------------------------------------
-  // Change shirt color
+  // Change product color
   //--------------------------------------------------
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    void updateShirtColor(currentView, productColor);
+    void updateProductColor(currentView, productColor);
   }, [productColor]);
 
   //--------------------------------------------------
@@ -94,7 +97,7 @@ export function useFabricDesigner(
 
     const objects = canvas
       .getObjects()
-      .filter((obj) => !(obj as any).data?.isShirt);
+      .filter((obj) => !(obj as any).data?.isProduct);
 
     designsRef.current[side] = objects.map((obj) =>
       obj.toObject(["data"])
@@ -112,7 +115,7 @@ export function useFabricDesigner(
     const objects = designsRef.current[side];
 
     for (const objectData of objects) {
-      if ((objectData as any).data?.isShirt) {
+      if ((objectData as any).data?.isProduct) {
         continue;
       }
 
@@ -137,44 +140,46 @@ export function useFabricDesigner(
   }
 
   //--------------------------------------------------
-  // Load shirt image
+  // Load product image
   //--------------------------------------------------
 
-  async function loadShirt(view: ProductView, color: ProductColor) {
+  async function loadProduct(view: ProductView, color: ProductColor) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Remove old shirt
+    // Remove previous product image
     canvas.getObjects().forEach((obj) => {
-      if ((obj as any).data?.isShirt) {
+      if ((obj as any).data?.isProduct) {
         canvas.remove(obj);
       }
     });
 
-    const shirt = await FabricImage.fromURL(
-      shirtAssets.tshirt[color][view]
+    const productImage = await FabricImage.fromURL(
+      productAssets[product.type][color][view]
     );
 
+    const display =
+    productDisplay[product.type][view];
 
-    shirt.scaleToWidth(shirtSizes[view]);
+    productImage.scaleToWidth(display.width);
 
-    shirt.set({
-      left: 350,
-      top: 350,
+    productImage.set({
+      left: display.left,
+      top: display.top,
       originX: "center",
       originY: "center",
       selectable: false,
       evented: false,
     });
 
-    (shirt as any).data = {
-      isShirt: true,
+    (productImage as any).data = {
+      isProduct: true,
     };
 
-    shirtRef.current = shirt;
+    productRef.current = productImage;
 
-    canvas.add(shirt);
-    canvas.moveObjectTo(shirt, 0);
+    canvas.add(productImage);
+    canvas.moveObjectTo(productImage, 0);
     canvas.renderAll();
   }
 
@@ -189,15 +194,15 @@ export function useFabricDesigner(
     // Save previous side
     saveCurrentDesign(previousViewRef.current);
 
-    // Remove all non-shirt objects
+    // Remove all non-product objects
     canvas.getObjects().forEach((obj) => {
-      if (!(obj as any).data?.isShirt) {
+      if (!(obj as any).data?.isProduct) {
         canvas.remove(obj);
       }
     });
 
-    // Load new shirt
-    await loadShirt(view, productColor);
+    // Load new product
+    await loadProduct(view, productColor);
 
     // Restore new side design
     await restoreDesign(view);
@@ -208,14 +213,14 @@ export function useFabricDesigner(
   }
 
   //--------------------------------------------------
-  // Update shirt color only
+  // Update product color only
   //--------------------------------------------------
 
-  async function updateShirtColor(
+  async function updateProductColor(
     view: ProductView,
     color: ProductColor
   ) {
-    await loadShirt(view, color);
+    await loadProduct(view, color);
   }
 
   //--------------------------------------------------
@@ -251,11 +256,59 @@ export function useFabricDesigner(
   }
 
   //--------------------------------------------------
+  // Delete selected image
+  //--------------------------------------------------
+
+  function deleteSelected() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+
+    if (!activeObject) return;
+
+    // Never allow the product image to be deleted
+    if ((activeObject as any).data?.isProduct) {
+      return;
+    }
+
+    canvas.remove(activeObject);
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key !== "Delete" && e.key !== "Backspace") return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    // Never delete the T-shirt itself
+    if ((activeObject as any).data?.isProduct) return;
+
+    canvas.remove(activeObject);
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  }
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  //--------------------------------------------------
   // Expose API
   //--------------------------------------------------
 
   useImperativeHandle(ref, () => ({
     addImage,
+    deleteSelected,
   }));
 
   return canvasElementRef;

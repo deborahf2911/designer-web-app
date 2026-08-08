@@ -1,21 +1,27 @@
 import type { ChangeEvent } from "react";
 import type { ProductView } from "../../../types/designer";
 import type { ProductColor } from "../../../types/productColor";
+import type { Product } from "../../../types/product";
 
 interface SidebarProps {
+  product: Product;
   currentView: ProductView;
   productColor: ProductColor;
-  onViewChange: (view: ProductView) => void;
+
   onColorChange: (color: ProductColor) => void;
+  onViewChange: (view: ProductView) => void;
   onImageUpload: (file: File) => void;
+  onDeleteSelected: () => void;
 }
 
 export default function Sidebar({
+  product,
   currentView,
   productColor,
   onViewChange,
   onColorChange,
   onImageUpload,
+  onDeleteSelected,
 }: SidebarProps) {
   const views: ProductView[] = ["front", "back", "left", "right"];
 
@@ -33,7 +39,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-64 border-r bg-white p-5 shadow-sm">
+    <aside className="w-64 shrink-0 overflow-y-auto border-r bg-white p-5 shadow-sm">
       <h1 className="mb-8 text-2xl font-bold">
         T-Shirt Designer
       </h1>
@@ -65,7 +71,7 @@ export default function Sidebar({
               key={color}
               type="button"
               onClick={() => onColorChange(color)}
-              className={`flex items-center gap-3 rounded-lg border p-3 transition-all
+              className={`flex min-w-0 items-center gap-3 rounded-lg border p-3 transition-all
                 ${
                   productColor === color
                     ? "border-blue-600 bg-blue-50 shadow"
@@ -73,7 +79,7 @@ export default function Sidebar({
                 }`}
             >
               <span
-                className={`h-6 w-6 rounded-full border
+                className={`h-6 w-6 shrink-0 rounded-full border
                   ${
                     color === "white"
                       ? "bg-white"
@@ -97,6 +103,7 @@ export default function Sidebar({
 
       <label className="block w-full cursor-pointer rounded-lg bg-green-600 py-3 text-center text-white hover:bg-green-700">
         Upload Image
+
         <input
           type="file"
           accept="image/*"
@@ -104,6 +111,14 @@ export default function Sidebar({
           onChange={handleFileChange}
         />
       </label>
+
+      <button
+        type="button"
+        onClick={onDeleteSelected}
+        className="mt-3 w-full rounded-lg bg-red-600 py-3 text-center font-medium text-white transition hover:bg-red-700"
+      >
+        Delete Selected Image
+      </button>
     </aside>
   );
 }

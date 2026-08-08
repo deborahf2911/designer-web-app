@@ -1,4 +1,4 @@
-import type { ShirtView } from "../../types/designer";
+import type { ProductView } from "../../../types/designer";
 
 export interface PrintArea {
   left: number;
@@ -7,7 +7,7 @@ export interface PrintArea {
   height: number;
 }
 
-export const printAreas: Record<ShirtView, PrintArea> = {
+export const printAreas: Record<ProductView, PrintArea> = {
   front: {
     left: 25,
     top: 45,

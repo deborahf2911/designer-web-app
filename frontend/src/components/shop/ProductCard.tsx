@@ -32,7 +32,7 @@ export default function ProductCard({
         </p>
 
         <Link
-          to={`/designer/${product.id}`}
+          to={`/product/${product.id}`}
           className="block rounded-lg bg-blue-600 py-3 text-center font-semibold text-white transition hover:bg-blue-700"
         >
           Customize
