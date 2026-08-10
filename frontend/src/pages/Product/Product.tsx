@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 
 import { products } from "../../data/products";
+import type { ProductColor } from "../../types/productColor";
 
 export default function Product() {
   const { productId } = useParams();
@@ -20,7 +21,7 @@ export default function Product() {
   }
 
   const [selectedColor, setSelectedColor] =
-  useState(product.colors[0]);
+  useState<ProductColor>(product.colors[0]);
 
   const [selectedSize, setSelectedSize] =
     useState(product.sizes[1]);
@@ -149,14 +150,7 @@ export default function Product() {
             <button
               onClick={() =>
                 navigate(
-                  `/designer/${product.id}`,
-                  {
-                    state: {
-                      color: selectedColor,
-                      size: selectedSize,
-                      quantity
-                    },
-                  }
+                  `/designer/${product.id}?color=${selectedColor}&size=${selectedSize}`
                 )
               }
               className="rounded-lg bg-black px-8 py-3 text-white hover:bg-gray-800"

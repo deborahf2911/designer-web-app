@@ -32,53 +32,52 @@ export function DesignProvider({
 }: {
   children: ReactNode;
 }) {
-  const [design, setDesign] =
-    useState<DesignState>({
-      product: products[0],
+  const [design, setDesign] = useState({
+    product: products[0],
 
-      color: "white",
+    color: products[0].colors[0],
 
-      size: "M",
+    size: products[0].sizes[0],
 
-      currentView: "front",
+    currentView: "front" as ProductView,
 
-      views: {
-        front: null,
-        back: null,
-        left: null,
-        right: null,
-      },
-    });
-    
-    function setProduct(product: Product) {
-        setDesign((previous) => ({
-            ...previous,
-            product,
-        }));
-    }
-    
-    function setColor(color: ProductColor) {
-        setDesign((previous) => ({
-        ...previous,
-        color,
-        }));
-    }
-    
-    function setCurrentView(
-        currentView: ProductView
-    ) {
-        setDesign((previous) => ({
-        ...previous,
-        currentView,
-        }));
-    }
-    
-    function setSize(size: string) {
-        setDesign((previous) => ({
-        ...previous,
-        size,
-        }));
-    }
+    views: {
+      front: null,
+      back: null,
+      left: null,
+      right: null,
+    },
+  });
+
+  function setProduct(product: Product) {
+    setDesign((previous) => ({
+      ...previous,
+      product,
+    }));
+  }
+
+  function setColor(color: ProductColor) {
+    setDesign((previous) => ({
+      ...previous,
+      color,
+    }));
+  }
+
+  function setCurrentView(
+    currentView: ProductView
+  ) {
+    setDesign((previous) => ({
+      ...previous,
+      currentView,
+    }));
+  }
+
+  function setSize(size: string) {
+    setDesign((previous) => ({
+      ...previous,
+      size,
+    }));
+  }
 
   return (
     <DesignContext.Provider
@@ -88,7 +87,7 @@ export function DesignProvider({
         setColor,
         setCurrentView,
         setSize,
-        }}
+      }}
     >
       {children}
     </DesignContext.Provider>

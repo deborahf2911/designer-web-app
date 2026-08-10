@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ShoppingCart, Search, User } from "lucide-react";
-import logo from "../../assets/images/artiflex-logo.png";
+import logo from "../../assets/images/kingdom-threads-logo.png";
 
 export default function Navbar() {
   return (
@@ -20,7 +20,7 @@ export default function Navbar() {
 
         <div className="hidden sm:block">
             <h1 className="text-xl font-bold tracking-wide">
-            Artifex Studio
+            Kingdom Threads
             </h1>
 
             <p className="-mt-1 text-xs text-gray-500">

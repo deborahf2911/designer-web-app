@@ -11,5 +11,10 @@ export interface DesignState {
 
   currentView: ProductView;
 
-  views: Record<ProductView, string | null>;
+  views: {
+    front: null;
+    back: null;
+    left: null;
+    right: null;
+  };
 }

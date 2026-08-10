@@ -1,29 +1,53 @@
-import { forwardRef } from "react";
-
-import { useFabricDesigner } from "../../features/designer/hooks/useFabricDesigner";
-
-import type { ProductView } from "../../types/designer";
-import type { FabricDesignerHandle } from "../../features/designer/hooks/useFabricDesigner";
-import type { ProductColor } from "../../types/productColor";
+import {
+  forwardRef,
+} from "react";
 
 import type { Product } from "../../types/product";
+import type { ProductColor } from "../../types/productColor";
+import type { ProductView } from "../../types/designer";
+import type {
+  FabricDesignerHandle,
+} from "../../features/designer/hooks/useFabricDesigner";
+import type { TextStyle } from "../../features/designer/models/textStyle";
+import { useFabricDesigner } from "../../features/designer/hooks/useFabricDesigner";
 
-interface Props {
-    product: Product;
+interface CanvasAreaProps {
+  product: Product;
+  currentView: ProductView;
+  productColor: ProductColor;
 
-    currentView: ProductView;
+  onSelectionChange?: (
+    isSelected: boolean
+  ) => void;
 
-    productColor: ProductColor;
+  onTextStyleChange?: (
+    style: TextStyle
+  ) => void;
 }
 
-const CanvasArea = forwardRef<FabricDesignerHandle, Props>(
-  ({ product, currentView, productColor }, ref) => {
-    const canvasRef = useFabricDesigner(
+const CanvasArea = forwardRef<
+  FabricDesignerHandle,
+  CanvasAreaProps
+>(
+  (
+    {
       product,
       currentView,
       productColor,
-      ref
-  );
+      onSelectionChange,
+      onTextStyleChange,
+    },
+    ref
+  ) => {
+    const canvasRef =
+      useFabricDesigner(
+        product,
+        currentView,
+        productColor,
+        ref,
+        onSelectionChange,
+        onTextStyleChange
+      );
 
     return (
       <main className="flex flex-1 items-center justify-center bg-gray-200">
@@ -33,6 +57,7 @@ const CanvasArea = forwardRef<FabricDesignerHandle, Props>(
   }
 );
 
-CanvasArea.displayName = "CanvasArea";
+CanvasArea.displayName =
+  "CanvasArea";
 
 export default CanvasArea;

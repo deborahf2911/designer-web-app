@@ -1,21 +1,12 @@
+import type { ProductColor } from "./productColor";
+
 export interface Product {
   id: number;
-
-  type: "tshirt";
-
   name: string;
-
-  description: string;
-
-  price: number;
-
+  type: "tshirt";
   image: string;
-
-  gallery: string[];
-
-  colors: string[];
-
+  description: string;
+  price: number;
+  colors: ProductColor[];
   sizes: string[];
-
-  customizable: boolean;
 }

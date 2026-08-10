@@ -1,5 +1,15 @@
-import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import {
+  useParams,
+  useSearchParams,
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import { ArrowLeft } from "lucide-react";
 
 import Sidebar from "../../components/designer/Sidebar/Sidebar";
@@ -11,15 +21,38 @@ import {
 } from "../../features/designer/context/DesignContext";
 
 import type { FabricDesignerHandle } from "../../features/designer/hooks/useFabricDesigner";
+import type { ProductColor } from "../../types/productColor";
+import type { TextStyle } from "../../features/designer/models/textStyle";
 
 import { products } from "../../data/products";
 
+interface DesignerLocationState {
+  color?: ProductColor;
+  size?: string;
+}
+
 function DesignerContent() {
   const navigate = useNavigate();
-  const { productId } = useParams();
-  const location = useLocation();
 
-  const canvasRef = useRef<FabricDesignerHandle>(null);
+  const { productId } = useParams();
+
+  const [searchParams] = useSearchParams();
+
+  const canvasRef =
+    useRef<FabricDesignerHandle | null>(null);
+
+  const [textSelected, setTextSelected] =
+  useState(false);
+
+  const [textStyle, setTextStyle] =
+    useState<TextStyle>({
+      fill: "#000000",
+      fontFamily: "Arial",
+      fontWeight: "normal",
+      fontStyle: "normal",
+      underline: false,
+      fontSize: 40,
+    });
 
   const {
     design,
@@ -29,55 +62,175 @@ function DesignerContent() {
     setSize,
   } = useDesign();
 
-  const product =
-    products.find((p) => p.id === Number(productId)) ??
-    products[0];
+  // -----------------------------------------
+  // Find product
+  // -----------------------------------------
 
-  const selectedColor =
-    location.state?.color ?? product.colors[0];
+  const product =
+    products.find(
+      (p) => p.id === Number(productId)
+    ) ?? products[0];
+
+  // -----------------------------------------
+  // Read state from Product page
+  // -----------------------------------------
+
+  const urlColor =
+  searchParams.get("color");
+
+  const urlSize =
+    searchParams.get("size");
+
+  const selectedColor: ProductColor =
+    product.colors.includes(
+      urlColor as ProductColor
+    )
+      ? (urlColor as ProductColor)
+      : product.colors[0];
 
   const selectedSize =
-    location.state?.size ?? product.sizes[0];
+    product.sizes.includes(
+      urlSize ?? ""
+    )
+      ? urlSize!
+      : product.sizes[0];
+
+  // -----------------------------------------
+  // Initialise designer
+  // -----------------------------------------
 
   useEffect(() => {
     setProduct(product);
     setColor(selectedColor);
     setSize(selectedSize);
+  }, [
+    product,
+    selectedColor,
+    selectedSize
+  ]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // -----------------------------------------
+  // Render
+  // -----------------------------------------
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-gray-100">
 
-      {/* LEFT SIDEBAR */}
+      {/* =====================================
+          LEFT SIDEBAR
+      ===================================== */}
+
       <Sidebar
-        product={design.product}
         currentView={design.currentView}
         productColor={design.color}
+
+        textSelected={textSelected}
+
+        textStyle={textStyle}
+
         onColorChange={setColor}
         onViewChange={setCurrentView}
-        onImageUpload={(file) =>
-          void canvasRef.current?.addImage(file)
-        }
-        onDeleteSelected={() =>
-          canvasRef.current?.deleteSelected()
-        }
+
+        onImageUpload={(file) => {
+          void canvasRef.current?.addImage(file);
+        }}
+
+        onDeleteSelected={() => {
+          canvasRef.current?.deleteSelected();
+        }}
+
+        onTextAdd={(text) => {
+          canvasRef.current?.addText(text);
+        }}
+
+        onTextColorChange={(color) => {
+          canvasRef.current?.updateSelectedTextColor(color);
+
+          setTextStyle((previous) => ({
+            ...previous,
+            fill: color,
+          }));
+        }}
+
+        onFontChange={(font) => {
+          canvasRef.current?.updateSelectedFont(font);
+
+          setTextStyle((previous) => ({
+            ...previous,
+            fontFamily: font,
+          }));
+        }}
+
+        onBold={() => {
+          canvasRef.current?.toggleBold();
+
+          setTextStyle((previous) => ({
+            ...previous,
+            fontWeight:
+              previous.fontWeight === "bold"
+                ? "normal"
+                : "bold",
+          }));
+        }}
+
+        onItalic={() => {
+          canvasRef.current?.toggleItalic();
+
+          setTextStyle((previous) => ({
+            ...previous,
+            fontStyle:
+              previous.fontStyle === "italic"
+                ? "normal"
+                : "italic",
+          }));
+        }}
+
+        onUnderline={() => {
+          canvasRef.current?.toggleUnderline();
+
+          setTextStyle((previous) => ({
+            ...previous,
+            underline: !previous.underline,
+          }));
+        }}
+
+        onFontSizeChange={(amount) => {
+          canvasRef.current?.changeFontSize(amount);
+
+          setTextStyle((previous) => ({
+            ...previous,
+            fontSize: Math.max(
+              8,
+              Math.min(
+                150,
+                previous.fontSize + amount
+              )
+            ),
+          }));
+        }}
       />
 
-      {/* RIGHT SIDE */}
+      {/* =====================================
+          RIGHT SIDE
+      ===================================== */}
+
       <div className="flex min-w-0 flex-1 flex-col">
 
         {/* PRODUCT HEADER */}
+
         <div className="shrink-0 border-b bg-white px-8 py-4">
 
           <button
+            type="button"
             onClick={() =>
-              navigate(`/product/${design.product.id}`)
+              navigate(
+                `/product/${design.product.id}`
+              )
             }
             className="mb-3 flex items-center gap-2 text-sm text-gray-600 transition hover:text-black"
           >
             <ArrowLeft size={18} />
+
             Back to Product
           </button>
 
@@ -86,12 +239,14 @@ function DesignerContent() {
           </h1>
 
           <p className="text-gray-500">
-            {design.color.toUpperCase()} • Size {design.size}
+            {design.color.toUpperCase()} • Size{" "}
+            {design.size}
           </p>
 
         </div>
 
         {/* CANVAS */}
+
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gray-200 p-4">
 
           <CanvasArea
@@ -99,14 +254,29 @@ function DesignerContent() {
             currentView={design.currentView}
             productColor={design.color}
             ref={canvasRef}
+            onSelectionChange={(isSelected) => {
+              setTextSelected(isSelected);
+
+              if (isSelected) {
+                const style =
+                  canvasRef.current?.getSelectedTextStyle();
+
+                if (style) {
+                  setTextStyle(style);
+                }
+              }
+            }}
+            onTextStyleChange={setTextStyle}
           />
 
         </div>
 
-        {/* SAVE BUTTON */}
+        {/* SAVE */}
+
         <div className="shrink-0 border-t bg-white p-4">
 
           <button
+            type="button"
             className="w-full rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700"
           >
             Save Design & Continue
@@ -115,6 +285,7 @@ function DesignerContent() {
         </div>
 
       </div>
+
     </div>
   );
 }
