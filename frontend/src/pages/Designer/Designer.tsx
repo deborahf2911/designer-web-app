@@ -24,12 +24,16 @@ import type { FabricDesignerHandle } from "../../features/designer/hooks/useFabr
 import type { ProductColor } from "../../types/productColor";
 import type { TextStyle } from "../../features/designer/models/textStyle";
 
-import { products } from "../../data/products";
+import { useCart } from "../../contexts/CartContext";
+import { customizationPricing } from "../../data/customizationPricing";
 
-interface DesignerLocationState {
-  color?: ProductColor;
-  size?: string;
-}
+import { products } from "../../data/products";
+import { productAssets } from "../../features/designer/config/productAssets";
+
+// interface DesignerLocationState {
+//   color?: ProductColor;
+//   size?: string;
+// }
 
 function DesignerContent() {
   const navigate = useNavigate();
@@ -38,11 +42,16 @@ function DesignerContent() {
 
   const [searchParams] = useSearchParams();
 
+  const { addItem } = useCart();
+
   const canvasRef =
     useRef<FabricDesignerHandle | null>(null);
 
   const [textSelected, setTextSelected] =
   useState(false);
+
+  const designPreview =
+  canvasRef.current?.getPreview() ?? undefined;
 
   const [textStyle, setTextStyle] =
     useState<TextStyle>({
@@ -61,6 +70,15 @@ function DesignerContent() {
     setCurrentView,
     setSize,
   } = useDesign();
+
+  const urlQuantity =
+  searchParams.get("quantity");
+
+  const quantity =
+    Math.max(
+      1,
+      Number(urlQuantity) || 1
+    );
 
   // -----------------------------------------
   // Find product
@@ -108,6 +126,67 @@ function DesignerContent() {
     selectedColor,
     selectedSize
   ]);
+
+  function handleSaveAndContinue() {
+    const summary =
+      canvasRef.current
+        ?.getCustomizationSummary();
+
+    if (!summary) {
+      return;
+    }
+
+    const textPrice =
+      summary.textCount *
+      customizationPricing.text;
+
+    const imagePrice =
+      summary.imageCount *
+      customizationPricing.image;
+
+    const fontPrice =
+      summary.premiumFontUsed
+        ? customizationPricing.premiumFont
+        : 0;
+
+    const customizationPrice =
+      textPrice +
+      imagePrice +
+      fontPrice;
+
+    const unitPrice =
+      product.price +
+      customizationPrice;
+
+    const selectedProductImage =
+    productAssets[product.type][design.color].front;
+
+    addItem({
+      id: crypto.randomUUID(),
+
+      productId: product.id,
+      productName: product.name,
+      productImage: selectedProductImage,
+
+      designPreview,
+
+      color: design.color,
+      size: design.size,
+      quantity,
+
+      basePrice: product.price,
+
+      customized: true,
+
+      customization: summary,
+
+      customizationPrice,
+
+      unitPrice,
+    });
+
+    navigate("/cart");
+  }
 
   // -----------------------------------------
   // Render
@@ -277,6 +356,7 @@ function DesignerContent() {
 
           <button
             type="button"
+            onClick={handleSaveAndContinue}
             className="w-full rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700"
           >
             Save Design & Continue

@@ -288,21 +288,65 @@ export default function Sidebar({
             }
             className="w-full rounded-lg border px-3 py-2"
           >
-            <option value="Arial">
-              Arial
-            </option>
+            <optgroup label="Modern">
+              <option value="Poppins">Poppins</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Open Sans">Open Sans</option>
+            </optgroup>
 
-            <option value="Helvetica">
-              Helvetica
-            </option>
+            <optgroup label="Bold / T-Shirt">
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Oswald">Oswald</option>
+              <option value="Anton">Anton</option>
+            </optgroup>
 
-            <option value="Times New Roman">
-              Times New Roman
-            </option>
+            <optgroup label="Elegant">
+              <option value="Playfair Display">
+                Playfair Display
+              </option>
+            </optgroup>
 
-            <option value="Georgia">
-              Georgia
-            </option>
+            <optgroup label="Display">
+              <option value="Righteous">Righteous</option>
+            </optgroup>
+
+            <optgroup label="Handwritten">
+              <option value="Lobster">Lobster</option>
+              <option value="Pacifico">Pacifico</option>
+              <option value="Permanent Marker">
+                Permanent Marker
+              </option>
+            </optgroup>
+
+            <optgroup label="Streetwear">
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Bungee">Bungee</option>
+              <option value="Anton">Anton</option>
+              <option value="Russo One">Russo One</option>
+              <option value="Staatliches">Staatliches</option>
+              <option value="Teko">Teko</option>
+            </optgroup>
+
+            <optgroup label="Fun / Graphic">
+              <option value="Bangers">Bangers</option>
+              <option value="Luckiest Guy">Luckiest Guy</option>
+              <option value="Londrina Solid">Londrina Solid</option>
+              <option value="Fugaz One">Fugaz One</option>
+            </optgroup>
+
+            <optgroup label="Retro">
+              <option value="Monoton">Monoton</option>
+              <option value="Silkscreen">Silkscreen</option>
+            </optgroup>
+
+            <optgroup label="Futuristic">
+              <option value="Orbitron">Orbitron</option>
+            </optgroup>
+
+            <optgroup label="Special">
+              <option value="Creepster">Creepster</option>
+            </optgroup>
           </select>
         </div>
 

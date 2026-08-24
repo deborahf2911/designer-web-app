@@ -52,11 +52,11 @@ export default function Product() {
             {product.description}
           </p>
 
-          <div className="mt-8">
+          {/* <div className="mt-8">
             <span className="text-3xl font-bold">
               Rs. {product.price.toLocaleString()}
             </span>
-          </div>
+          </div> */}
 
           <div className="mt-8">
             <p className="mb-3 font-semibold">
@@ -148,20 +148,15 @@ export default function Product() {
           <div className="mt-10 flex gap-4">
 
             <button
+              type="button"
               onClick={() =>
                 navigate(
-                  `/designer/${product.id}?color=${selectedColor}&size=${selectedSize}`
+                  `/designer/${product.id}?color=${selectedColor}&size=${selectedSize}&quantity=${quantity}`
                 )
               }
               className="rounded-lg bg-black px-8 py-3 text-white hover:bg-gray-800"
             >
               Customize
-            </button>
-
-            <button
-              className="rounded-lg border px-8 py-3 hover:bg-gray-100"
-            >
-              Add to Cart
             </button>
 
           </div>

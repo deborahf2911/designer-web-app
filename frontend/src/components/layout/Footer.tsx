@@ -1,136 +1,283 @@
-import { MapPin, Phone, Mail } from "lucide-react";
+import {
+  Link,
+} from "react-router-dom";
+
+import {
+  MapPin,
+  Phone,
+  Mail,
+} from "lucide-react";
+
 import {
   FaFacebookF,
   FaInstagram,
   FaLinkedinIn,
 } from "react-icons/fa";
 
+import {
+  useAuth,
+} from "../../contexts/AuthContext";
+
 export default function Footer() {
+  const {
+    user,
+  } = useAuth();
+
   return (
     <footer className="bg-slate-950 text-gray-300">
 
-      <div className="mx-auto grid max-w-7xl gap-14 px-6 py-20 lg:grid-cols-4">
+      {/* =====================================
+          MAIN FOOTER
+      ===================================== */}
 
-        {/* Company */}
+      <div className="mx-auto grid max-w-7xl gap-12 px-6 py-14 md:grid-cols-2 lg:grid-cols-4">
+
+        {/* =====================================
+            COMPANY
+        ===================================== */}
 
         <div>
 
-          <h2 className="text-3xl font-black text-white">
-            Artifex Studio
+          <h2 className="text-2xl font-black text-white">
+            Kingdom Threads
           </h2>
 
-          <p className="mt-6 leading-8 text-slate-400">
-            Create premium custom apparel using our
+          <p className="mt-5 max-w-sm leading-7 text-slate-400">
+            Create unique custom products using our
             professional online designer. Design,
             personalize and order in minutes.
           </p>
 
-          <div className="mt-8 flex gap-4">
+          {/* SOCIAL */}
+
+          <div className="mt-7 flex gap-4">
 
             <a
               href="#"
+              aria-label="Facebook"
               className="rounded-full bg-slate-800 p-3 transition hover:bg-blue-600"
             >
-              <FaFacebookF size={20} />
+              <FaFacebookF size={18} />
             </a>
 
             <a
               href="#"
+              aria-label="Instagram"
               className="rounded-full bg-slate-800 p-3 transition hover:bg-pink-600"
             >
-              <FaInstagram size={20} />
+              <FaInstagram size={18} />
             </a>
 
             <a
               href="#"
+              aria-label="LinkedIn"
               className="rounded-full bg-slate-800 p-3 transition hover:bg-blue-500"
             >
-              <FaLinkedinIn size={20} />
+              <FaLinkedinIn size={18} />
             </a>
 
           </div>
 
         </div>
 
-        {/* Shop */}
+        {/* =====================================
+            SHOP
+        ===================================== */}
 
         <div>
 
-          <h3 className="text-xl font-bold text-white">
+          <h3 className="text-lg font-bold text-white">
             Shop
           </h3>
 
-          <ul className="mt-6 space-y-4">
+          <ul className="mt-5 space-y-3 text-slate-400">
 
-            <li>T-Shirts</li>
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                T-Shirts
+              </Link>
+            </li>
 
-            <li>Hoodies</li>
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                Hoodies
+              </Link>
+            </li>
 
-            <li>Caps</li>
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                Caps
+              </Link>
+            </li>
 
-            <li>Mugs</li>
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                Mugs
+              </Link>
+            </li>
 
-            <li>Accessories</li>
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                Accessories
+              </Link>
+            </li>
 
           </ul>
 
         </div>
 
-        {/* Quick Links */}
+        {/* =====================================
+            QUICK LINKS
+        ===================================== */}
 
         <div>
 
-          <h3 className="text-xl font-bold text-white">
+          <h3 className="text-lg font-bold text-white">
             Quick Links
           </h3>
 
-          <ul className="mt-6 space-y-4">
+          <ul className="mt-5 space-y-3 text-slate-400">
 
-            <li>Home</li>
+            <li>
+              <Link
+                to="/"
+                className="transition hover:text-white"
+              >
+                Home
+              </Link>
+            </li>
 
-            <li>Shop</li>
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                Shop
+              </Link>
+            </li>
 
-            <li>My Orders</li>
+            {/* LOGGED IN */}
 
-            <li>Login</li>
+            {user ? (
+              <>
+                <li>
+                  <Link
+                    to="/account"
+                    className="transition hover:text-white"
+                  >
+                    My Account
+                  </Link>
+                </li>
 
-            <li>Register</li>
+                <li>
+                  <Link
+                    to="/orders"
+                    className="transition hover:text-white"
+                  >
+                    My Orders
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    to="/saved-designs"
+                    className="transition hover:text-white"
+                  >
+                    Saved Designs
+                  </Link>
+                </li>
+              </>
+            ) : (
+              <>
+                {/* LOGGED OUT */}
+
+                <li>
+                  <Link
+                    to="/login"
+                    className="transition hover:text-white"
+                  >
+                    Login
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    to="/register"
+                    className="transition hover:text-white"
+                  >
+                    Register
+                  </Link>
+                </li>
+              </>
+            )}
 
           </ul>
 
         </div>
 
-        {/* Contact */}
+        {/* =====================================
+            CONTACT
+        ===================================== */}
 
         <div>
 
-          <h3 className="text-xl font-bold text-white">
+          <h3 className="text-lg font-bold text-white">
             Contact
           </h3>
 
-          <div className="mt-6 space-y-5">
+          <div className="mt-5 space-y-4 text-slate-400">
 
-            <div className="flex gap-3">
+            <div className="flex items-start gap-3">
 
-              <MapPin className="text-blue-500" />
+              <MapPin
+                size={21}
+                className="mt-0.5 shrink-0 text-blue-500"
+              />
 
-              <span>Colombo, Sri Lanka</span>
-
-            </div>
-
-            <div className="flex gap-3">
-
-              <Phone className="text-blue-500" />
-
-              <span>+94 77 123 4567</span>
+              <span>
+                Colombo, Sri Lanka
+              </span>
 
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex items-start gap-3">
 
-              <Mail className="text-blue-500" />
+              <Phone
+                size={21}
+                className="mt-0.5 shrink-0 text-blue-500"
+              />
 
-              <span>info@artifexstudio.com</span>
+              <span>
+                +94 77 123 4567
+              </span>
+
+            </div>
+
+            <div className="flex items-start gap-3">
+
+              <Mail
+                size={21}
+                className="mt-0.5 shrink-0 text-blue-500"
+              />
+
+              <span className="break-all">
+                info@kingdomthreads.com
+              </span>
 
             </div>
 
@@ -140,21 +287,40 @@ export default function Footer() {
 
       </div>
 
+      {/* =====================================
+          BOTTOM
+      ===================================== */}
+
       <div className="border-t border-slate-800">
 
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-6 py-8 text-sm text-slate-500 lg:flex-row">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-6 text-sm text-slate-500 md:flex-row">
 
           <p>
-            © 2026 Artifex Studio. All Rights Reserved.
+            © 2026 Kingdom Threads. All Rights Reserved.
           </p>
 
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
 
-            <span>Privacy Policy</span>
+            <Link
+              to="/privacy"
+              className="transition hover:text-white"
+            >
+              Privacy Policy
+            </Link>
 
-            <span>Terms</span>
+            <Link
+              to="/terms"
+              className="transition hover:text-white"
+            >
+              Terms
+            </Link>
 
-            <span>Cookies</span>
+            <Link
+              to="/cookies"
+              className="transition hover:text-white"
+            >
+              Cookies
+            </Link>
 
           </div>
 

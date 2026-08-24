@@ -5,8 +5,10 @@ export interface Product {
   name: string;
   type: "tshirt";
   image: string;
+  gallery: string[];
   description: string;
   price: number;
   colors: ProductColor[];
   sizes: string[];
+  customizable: boolean;
 }

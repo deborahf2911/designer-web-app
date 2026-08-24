@@ -1,23 +1,34 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
-import heroImage from "../../assets/images/hero.png";
+import {
+  ArrowRight,
+  CheckCircle2,
+} from "lucide-react";
+
+import heroImage from "../../assets/images/kingdom-threads-hero.png";
 
 export default function Hero() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white">
-      {/* Background Effects */}
+
+      {/* BACKGROUND EFFECTS */}
+
       <div className="absolute -left-40 top-20 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
+
       <div className="absolute right-0 top-0 h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-3xl" />
 
-      <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col items-center justify-between gap-20 px-6 py-24 lg:flex-row">
-        {/* LEFT */}
+      <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col items-center justify-between gap-12 px-6 py-16 lg:flex-row lg:py-20">
+
+        {/* =====================================
+            LEFT
+        ===================================== */}
+
         <div className="max-w-xl">
 
           <span className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-300">
             NEW COLLECTION 2026
           </span>
 
-          <h1 className="mt-8 text-5xl font-black leading-tight lg:text-7xl">
+          <h1 className="mt-6 text-5xl font-black leading-tight lg:text-7xl">
             Design.
             <br />
             Create.
@@ -25,14 +36,16 @@ export default function Hero() {
             Wear.
           </h1>
 
-          <p className="mt-8 text-lg leading-8 text-slate-300">
-            Create premium custom apparel with our professional
-            online designer. Upload your artwork, add text,
-            change colors and preview every angle before placing
-            your order.
+          <p className="mt-6 text-lg leading-8 text-slate-300">
+            Create unique custom products with our
+            professional online designer. Upload your
+            artwork, add text, change colours and preview
+            your creation before placing your order.
           </p>
 
-          <div className="mt-10 flex flex-wrap gap-4">
+          {/* BUTTONS */}
+
+          <div className="mt-8 flex flex-wrap gap-4">
 
             <Link
               to="/shop"
@@ -51,38 +64,63 @@ export default function Hero() {
 
           </div>
 
-          <div className="mt-12 space-y-4">
+          {/* FEATURES */}
+
+          <div className="mt-9 space-y-3">
 
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="text-green-400" />
-              Premium Printing Quality
+              <CheckCircle2
+                size={21}
+                className="text-green-400"
+              />
+
+              <span>
+                Premium Printing Quality
+              </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="text-green-400" />
-              Unlimited Design Tools
+              <CheckCircle2
+                size={21}
+                className="text-green-400"
+              />
+
+              <span>
+                Powerful Design Tools
+              </span>
             </div>
 
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="text-green-400" />
-              Fast Island-wide Delivery
+              <CheckCircle2
+                size={21}
+                className="text-green-400"
+              />
+
+              <span>
+                Island-wide Delivery
+              </span>
             </div>
 
           </div>
 
         </div>
 
-        {/* RIGHT — Hero Image */}
-        <div className="relative flex min-h-[520px] items-center justify-center">
+        {/* =====================================
+            RIGHT
+        ===================================== */}
 
-        {/* Hero Image */}
-        <img
-            src="/src/assets/images/hero.png"
-            alt="Custom Product"
-            className="relative z-10 w-full max-w-[560px] object-contain drop-shadow-[0_40px_70px_rgba(0,0,0,0.45)]"
-        />
+        <div className="relative flex w-full max-w-xl items-center justify-center">
+
+          <img
+            src={heroImage}
+            alt="Kingdom Threads custom products"
+            className="relative z-10 w-full object-contain drop-shadow-[0_40px_70px_rgba(0,0,0,0.45)]"
+          />
+
         </div>
+
       </div>
+
     </section>
   );
 }

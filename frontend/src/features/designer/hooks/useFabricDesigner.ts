@@ -23,9 +23,18 @@ export interface FabricDesignerHandle {
   addImage(file: File): Promise<void>;
   addText(text: string): void;
   deleteSelected(): void;
+  getPreview(): string | null;
+
+  getCustomizationSummary(): {
+    textCount: number;
+    imageCount: number;
+    premiumFontUsed: boolean;
+  };
 
   updateSelectedTextColor(color: string): void;
-  updateSelectedFont(fontFamily: string): void;
+  updateSelectedFont(
+    fontFamily: string
+  ): Promise<void>;
 
   toggleBold(): void;
   toggleItalic(): void;
@@ -85,6 +94,25 @@ export function useFabricDesigner(
     right: [],
   });
 
+  const premiumFonts = [
+    "Bebas Neue",
+    "Pacifico",
+    "Lobster",
+    "Playfair Display",
+    "Bangers",
+    "Bungee",
+    "Creepster",
+    "Fugaz One",
+    "Luckiest Guy",
+    "Monoton",
+    "Orbitron",
+    "Righteous",
+    "Russo One",
+    "Staatliches",
+    "Teko",
+    "Silkscreen",
+  ];
+
   // =========================================================
   // KEEP CALLBACKS UPDATED
   // =========================================================
@@ -131,6 +159,20 @@ export function useFabricDesigner(
       fontSize:
         textObject.fontSize ?? 40,
     };
+  }
+
+  function getPreview(): string | null {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return null;
+    }
+
+    return canvas.toDataURL({
+      format: "png",
+      quality: 1,
+      multiplier: 1,
+    });
   }
 
   // =========================================================
@@ -764,78 +806,43 @@ export function useFabricDesigner(
   // ADD TEXT
   // =========================================================
 
-  function addText(
-    text: string
-  ) {
-    const canvas =
-      canvasRef.current;
+  async function addText(text: string) {
+    const canvas = canvasRef.current;
 
     if (!canvas) {
       return;
     }
 
-    const textObject =
-      new IText(text, {
-        left: 350,
-        top: 320,
+    await document.fonts.ready;
 
-        originX:
-          "center",
+    const textObject = new IText(text, {
+      left: 350,
+      top: 320,
 
-        originY:
-          "center",
+      originX: "center",
+      originY: "center",
 
-        fontSize:
-          40,
+      fontSize: 40,
+      fill: "#000000",
 
-        fill:
-          "#000000",
+      fontFamily: "Poppins",
 
-        fontFamily:
-          "Arial",
+      fontWeight: "normal",
+      fontStyle: "normal",
+      underline: false,
 
-        fontWeight:
-          "normal",
+      editable: true,
+      selectable: true,
+      evented: true,
+    });
 
-        fontStyle:
-          "normal",
+    canvas.add(textObject);
 
-        underline:
-          false,
+    canvas.setActiveObject(textObject);
 
-        editable:
-          true,
+    selectedTextRef.current = textObject;
 
-        selectable:
-          true,
-
-        evented:
-          true,
-      });
-
-    canvas.add(
-      textObject
-    );
-
-    // =======================================================
-    // SELECT THE NEW TEXT
-    // =======================================================
-
-    canvas.setActiveObject(
-      textObject
-    );
-
-    selectedTextRef.current =
-      textObject;
-
-    // =======================================================
-    // IMPORTANT:
-    // Tell React immediately that text is selected.
-    // =======================================================
-
-    selectText(
-      textObject
-    );
+    selectText(textObject);
 
     canvas.requestRenderAll();
   }
@@ -927,27 +934,38 @@ export function useFabricDesigner(
   // FONT
   // =========================================================
 
-  function updateSelectedFont(
+  async function updateSelectedFont(
     fontFamily: string
   ) {
-    const textObject =
-      getSelectedText();
+    const textObject = getSelectedText();
 
     if (!textObject) {
       return;
     }
 
-    textObject.set({
-      fontFamily,
-    });
+    try {
+      await document.fonts.load(
+        `40px "${fontFamily}"`
+      );
 
-    onTextStyleChangeRef.current?.(
-      getTextStyle(
-        textObject
-      )
-    );
+      textObject.set({
+        fontFamily,
+      });
 
-    refreshCanvas();
+      textObject.initDimensions();
+      textObject.setCoords();
+
+      onTextStyleChangeRef.current?.(
+        getTextStyle(textObject)
+      );
+
+      refreshCanvas();
+    } catch (error) {
+      console.error(
+        "Font loading failed:",
+        error
+      );
+    }
   }
 
   // =========================================================
@@ -1208,6 +1226,96 @@ export function useFabricDesigner(
     };
   }, []);
 
+  function getCustomizationSummary() {
+    const canvas = canvasRef.current;
+
+    let textCount = 0;
+    let imageCount = 0;
+    let premiumFontUsed = false;
+
+    if (!canvas) {
+      return {
+        textCount,
+        imageCount,
+        premiumFontUsed,
+      };
+    }
+
+    const inspectObjects = (
+      objects: ReturnType<
+        FabricObject["toObject"]
+      >[]
+    ) => {
+      objects.forEach((object) => {
+        if (
+          object.type === "IText"
+        ) {
+          textCount += 1;
+
+          const fontFamily =
+            (object as any)
+              .fontFamily;
+
+          if (
+            premiumFonts.includes(
+              fontFamily
+            )
+          ) {
+            premiumFontUsed =
+              true;
+          }
+        }
+
+        if (
+          object.type === "Image"
+        ) {
+          imageCount += 1;
+        }
+      });
+    };
+
+    // Current visible side
+    const currentObjects =
+      canvas
+        .getObjects()
+        .filter(
+          (object) =>
+            !(object as any)
+              .data?.isProduct
+        )
+        .map((object) =>
+          object.toObject(["data"])
+        );
+
+    // Current view hasn't necessarily been
+    // written into designsRef yet.
+    inspectObjects(currentObjects);
+
+    // Other stored sides
+    (
+      Object.keys(
+        designsRef.current
+      ) as ProductView[]
+    ).forEach((side) => {
+      if (
+        side ===
+        previousViewRef.current
+      ) {
+        return;
+      }
+
+      inspectObjects(
+        designsRef.current[side]
+      );
+    });
+
+    return {
+      textCount,
+      imageCount,
+      premiumFontUsed,
+    };
+  }
+
   // =========================================================
   // EXPOSE API TO CANVAS AREA
   // =========================================================
@@ -1229,6 +1337,9 @@ export function useFabricDesigner(
       changeFontSize,
 
       getSelectedTextStyle,
+
+      getCustomizationSummary,
+      getPreview,
     }),
     []
   );

@@ -1,105 +1,93 @@
-import { Star } from "lucide-react";
+import {
+  Palette,
+  Eye,
+  PackageCheck,
+} from "lucide-react";
 
-const testimonials = [
+const benefits = [
   {
-    name: "John Perera",
-    role: "Business Owner",
-    image: "https://i.pravatar.cc/150?img=12",
-    review:
-      "Excellent print quality and an incredibly easy designer. Our company shirts looked fantastic.",
+    title: "Easy Customization",
+    description:
+      "Upload artwork, add text, change colours and build your design using simple customization tools.",
+    icon: Palette,
   },
   {
-    name: "Amanda Silva",
-    role: "Fashion Designer",
-    image: "https://i.pravatar.cc/150?img=32",
-    review:
-      "The live preview is amazing. I knew exactly what I was ordering before checkout.",
+    title: "Preview Before Ordering",
+    description:
+      "See your customized product before adding it to your cart and placing an order.",
+    icon: Eye,
   },
   {
-    name: "Michael Fernando",
-    role: "University Student",
-    image: "https://i.pravatar.cc/150?img=15",
-    review:
-      "I designed hoodies for our batch and everyone loved them. Delivery was faster than expected.",
+    title: "Made For You",
+    description:
+      "Your selected product and customization details are prepared specifically for your order.",
+    icon: PackageCheck,
   },
 ];
 
 export default function Testimonials() {
   return (
-    <section className="bg-slate-50 py-28">
+    <section className="bg-white py-20">
+
       <div className="mx-auto max-w-7xl px-6">
+
+        {/* =====================================
+            HEADER
+        ===================================== */}
 
         <div className="text-center">
 
           <p className="font-semibold uppercase tracking-[0.3em] text-blue-600">
-            CUSTOMER REVIEWS
+            WHY KINGDOM THREADS
           </p>
 
-          <h2 className="mt-4 text-5xl font-black">
-            Loved By Thousands
+          <h2 className="mt-4 text-4xl font-black lg:text-5xl">
+            Create It Your Way
           </h2>
 
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-500">
-            See why customers choose Artifex Studio for
-            their custom apparel.
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-500">
+            A simple way to create personalized products
+            exactly how you want them.
           </p>
 
         </div>
 
-        <div className="mt-20 grid gap-8 lg:grid-cols-3">
+        {/* =====================================
+            CARDS
+        ===================================== */}
 
-          {testimonials.map((person) => (
+        <div className="mt-12 grid gap-8 lg:grid-cols-3">
 
-            <div
-              key={person.name}
-              className="rounded-3xl bg-white p-8 shadow-sm transition hover:-translate-y-2 hover:shadow-xl"
-            >
+          {benefits.map((benefit) => {
+            const Icon =
+              benefit.icon;
 
-              <div className="mb-6 flex">
+            return (
+              <div
+                key={benefit.title}
+                className="rounded-3xl border border-gray-100 bg-slate-50 p-8 transition hover:-translate-y-1 hover:shadow-lg"
+              >
 
-                {[...Array(5)].map((_, index) => (
-                  <Star
-                    key={index}
-                    size={20}
-                    className="fill-yellow-400 text-yellow-400"
-                  />
-                ))}
-
-              </div>
-
-              <p className="leading-8 text-gray-600">
-                "{person.review}"
-              </p>
-
-              <div className="mt-8 flex items-center gap-4">
-
-                <img
-                  src={person.image}
-                  alt={person.name}
-                  className="h-14 w-14 rounded-full object-cover"
-                />
-
-                <div>
-
-                  <h4 className="font-bold">
-                    {person.name}
-                  </h4>
-
-                  <p className="text-sm text-gray-500">
-                    {person.role}
-                  </p>
-
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white">
+                  <Icon size={27} />
                 </div>
 
+                <h3 className="mt-6 text-xl font-bold">
+                  {benefit.title}
+                </h3>
+
+                <p className="mt-3 leading-7 text-gray-600">
+                  {benefit.description}
+                </p>
+
               </div>
-
-            </div>
-
-          ))}
+            );
+          })}
 
         </div>
 
       </div>
+
     </section>
   );
 }

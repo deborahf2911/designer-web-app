@@ -27,9 +27,9 @@ export default function ProductCard({
           {product.description}
         </p>
 
-        <p className="text-2xl font-bold text-blue-600">
+        {/* <p className="text-2xl font-bold text-blue-600">
           Rs. {product.price.toLocaleString()}
-        </p>
+        </p> */}
 
         <Link
           to={`/product/${product.id}`}
