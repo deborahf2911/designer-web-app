@@ -12,46 +12,224 @@ import {
   type FabricObject,
 } from "fabric";
 
-import type { ProductView } from "../../../types/designer";
-import type { ProductColor } from "../../../types/productColor";
-import { productAssets } from "../config/productAssets";
-import { productDisplay } from "../config/productDisplay";
-import type { Product } from "../../../types/product";
-import type { TextStyle } from "../models/textStyle";
+import type {
+  ProductView,
+} from "../../../types/designer";
+
+import type {
+  ProductColor,
+} from "../../../types/productColor";
+
+import type {
+  Product,
+} from "../../../types/product";
+
+import type {
+  TextStyle,
+} from "../models/textStyle";
+
+import {
+  productAssets,
+} from "../config/productAssets";
+
+import {
+  productDisplay,
+} from "../config/productDisplay";
+
+import {
+  getDesignAssetUrl,
+  uploadDesignAsset,
+} from "../../../services/designAssetService";
+
+// =========================================================
+// TYPES
+// =========================================================
+
+type SerializedFabricObject =
+  ReturnType<
+    FabricObject["toObject"]
+  >;
+
+type DesignData =
+  Record<
+    ProductView,
+    SerializedFabricObject[]
+  >;
+
+// =========================================================
+// HANDLE
+// =========================================================
 
 export interface FabricDesignerHandle {
-  addImage(file: File): Promise<void>;
-  addText(text: string): void;
+  addImage(
+    file: File,
+    userId?: string
+  ): Promise<void>;
+
+  addText(
+    text: string
+  ): void;
+
   deleteSelected(): void;
-  getPreview(): string | null;
+
+  getPreview():
+    string | null;
+
+  getAllPreviews(): Promise<
+    Partial<
+      Record<
+        ProductView,
+        string
+      >
+    >
+  >;
+
+  getDesignData():
+    DesignData;
 
   getCustomizationSummary(): {
-    textCount: number;
-    imageCount: number;
-    premiumFontUsed: boolean;
+    textCount:
+      number;
+
+    imageCount:
+      number;
+
+    premiumFontUsed:
+      boolean;
   };
 
-  updateSelectedTextColor(color: string): void;
+  updateSelectedTextColor(
+    color: string
+  ): void;
+
   updateSelectedFont(
     fontFamily: string
   ): Promise<void>;
 
   toggleBold(): void;
+
   toggleItalic(): void;
+
   toggleUnderline(): void;
 
-  changeFontSize(amount: number): void;
+  changeFontSize(
+    amount: number
+  ): void;
 
-  getSelectedTextStyle(): TextStyle | null;
+  getSelectedTextStyle():
+    TextStyle | null;
+
+  loadDesignData(
+    designData:
+      DesignData,
+
+    initialView?:
+      ProductView
+  ): Promise<void>;
+
+  waitForPendingUploads():
+    Promise<void>;
 }
+
+// =========================================================
+// SESSION CACHES
+// =========================================================
+
+const designAssetUrlCache =
+  new Map<
+    string,
+    string
+  >();
+
+const designImageCache =
+  new Map<
+    string,
+    HTMLImageElement
+  >();
+
+const designImagePromiseCache =
+  new Map<
+    string,
+    Promise<HTMLImageElement>
+  >();
+
+const productImageCache =
+  new Map<
+    string,
+    HTMLImageElement
+  >();
+
+const productImagePromiseCache =
+  new Map<
+    string,
+    Promise<HTMLImageElement>
+  >();
+
+// =========================================================
+// FILE -> DATA URL
+// =========================================================
+
+function fileToDataUrl(
+  file: File
+): Promise<string> {
+  return new Promise(
+    (
+      resolve,
+      reject
+    ) => {
+      const reader =
+        new FileReader();
+
+      reader.onload =
+        () => {
+          if (
+            typeof reader.result ===
+            "string"
+          ) {
+            resolve(
+              reader.result
+            );
+
+            return;
+          }
+
+          reject(
+            new Error(
+              "Unable to read image."
+            )
+          );
+        };
+
+      reader.onerror =
+        () => {
+          reject(
+            new Error(
+              "Unable to read image."
+            )
+          );
+        };
+
+      reader.readAsDataURL(
+        file
+      );
+    }
+  );
+}
+
+// =========================================================
+// HOOK
+// =========================================================
 
 export function useFabricDesigner(
   product: Product,
   currentView: ProductView,
   productColor: ProductColor,
-  ref: ForwardedRef<FabricDesignerHandle>,
+  ref: ForwardedRef<
+    FabricDesignerHandle
+  >,
   onSelectionChange?: (
-    isTextSelected: boolean
+    isTextSelected:
+      boolean
   ) => void,
   onTextStyleChange?: (
     style: TextStyle
@@ -62,37 +240,63 @@ export function useFabricDesigner(
   // =========================================================
 
   const canvasElementRef =
-    useRef<HTMLCanvasElement>(null);
+    useRef<
+      HTMLCanvasElement
+    >(null);
 
   const canvasRef =
-    useRef<Canvas | null>(null);
+    useRef<
+      Canvas | null
+    >(null);
 
   const selectedTextRef =
-    useRef<IText | null>(null);
-
-  const productRef =
-    useRef<FabricImage | null>(null);
+    useRef<
+      IText | null
+    >(null);
 
   const previousViewRef =
-    useRef<ProductView>("front");
+    useRef<ProductView>(
+      currentView
+    );
 
   const onSelectionChangeRef =
-    useRef(onSelectionChange);
+    useRef(
+      onSelectionChange
+    );
 
   const onTextStyleChangeRef =
-    useRef(onTextStyleChange);
+    useRef(
+      onTextStyleChange
+    );
 
-  const designsRef = useRef<
-    Record<
-      ProductView,
-      ReturnType<FabricObject["toObject"]>[]
-    >
-  >({
-    front: [],
-    back: [],
-    left: [],
-    right: [],
-  });
+  const switchRequestRef =
+    useRef(
+      0
+    );
+
+  const pendingUploadCountRef =
+    useRef(
+      0
+    );
+
+  const designsRef =
+    useRef<DesignData>({
+      front:
+        [],
+
+      back:
+        [],
+
+      left:
+        [],
+
+      right:
+        [],
+    });
+
+  // =========================================================
+  // PREMIUM FONTS
+  // =========================================================
 
   const premiumFonts = [
     "Bebas Neue",
@@ -114,83 +318,77 @@ export function useFabricDesigner(
   ];
 
   // =========================================================
-  // KEEP CALLBACKS UPDATED
+  // KEEP CALLBACKS CURRENT
   // =========================================================
 
   useEffect(() => {
     onSelectionChangeRef.current =
       onSelectionChange;
-  }, [onSelectionChange]);
+  }, [
+    onSelectionChange,
+  ]);
 
   useEffect(() => {
     onTextStyleChangeRef.current =
       onTextStyleChange;
-  }, [onTextStyleChange]);
+  }, [
+    onTextStyleChange,
+  ]);
 
   // =========================================================
-  // TEXT STYLE HELPER
+  // TEXT HELPERS
   // =========================================================
+
+  function isTextObject(
+    object:
+      FabricObject | null
+  ): object is IText {
+    return (
+      object instanceof
+      IText
+    );
+  }
 
   function getTextStyle(
-    textObject: IText
+    textObject:
+      IText
   ): TextStyle {
     return {
       fontFamily:
-        textObject.fontFamily ?? "Arial",
+        textObject.fontFamily ??
+        "Arial",
 
       fontWeight:
-        textObject.fontWeight === "bold"
+        textObject.fontWeight ===
+        "bold"
           ? "bold"
           : "normal",
 
       fontStyle:
-        textObject.fontStyle === "italic"
+        textObject.fontStyle ===
+        "italic"
           ? "italic"
           : "normal",
 
       underline:
-        textObject.underline ?? false,
+        textObject.underline ??
+        false,
 
       fill:
-        typeof textObject.fill === "string"
+        typeof textObject.fill ===
+        "string"
           ? textObject.fill
           : "#000000",
 
       fontSize:
-        textObject.fontSize ?? 40,
+        textObject.fontSize ??
+        40,
     };
   }
 
-  function getPreview(): string | null {
-    const canvas = canvasRef.current;
-
-    if (!canvas) {
-      return null;
-    }
-
-    return canvas.toDataURL({
-      format: "png",
-      quality: 1,
-      multiplier: 1,
-    });
-  }
-
-  // =========================================================
-  // CHECK WHETHER OBJECT IS TEXT
-  // =========================================================
-
-  function isTextObject(
-    object: FabricObject | null
-  ): object is IText {
-    return object instanceof IText;
-  }
-
-  // =========================================================
-  // NOTIFY TEXT SELECTION
-  // =========================================================
-
   function selectText(
-    textObject: IText
+    textObject:
+      IText
   ) {
     selectedTextRef.current =
       textObject;
@@ -200,16 +398,15 @@ export function useFabricDesigner(
     );
 
     onTextStyleChangeRef.current?.(
-      getTextStyle(textObject)
+      getTextStyle(
+        textObject
+      )
     );
   }
 
-  // =========================================================
-  // CLEAR TEXT SELECTION
-  // =========================================================
-
   function clearTextSelection() {
-    selectedTextRef.current = null;
+    selectedTextRef.current =
+      null;
 
     onSelectionChangeRef.current?.(
       false
@@ -217,114 +414,386 @@ export function useFabricDesigner(
   }
 
   // =========================================================
+  // PREVIEW
+  // =========================================================
+
+  function getPreview():
+    string | null {
+    const canvas =
+      canvasRef.current;
+
+    if (
+      !canvas
+    ) {
+      return null;
+    }
+
+    canvas.discardActiveObject();
+
+    canvas.requestRenderAll();
+
+    return canvas.toDataURL({
+      format:
+        "png",
+
+      quality:
+        1,
+
+      multiplier:
+        1,
+    });
+  }
+
+  // =========================================================
+  // SIGNED URL CACHE
+  // =========================================================
+
+  async function getCachedAssetUrl(
+    storagePath:
+      string
+  ): Promise<string> {
+    const cachedUrl =
+      designAssetUrlCache.get(
+        storagePath
+      );
+
+    if (
+      cachedUrl
+    ) {
+      return cachedUrl;
+    }
+
+    const signedUrl =
+      await getDesignAssetUrl(
+        storagePath
+      );
+
+    designAssetUrlCache.set(
+      storagePath,
+      signedUrl
+    );
+
+    return signedUrl;
+  }
+
+  // =========================================================
+  // CUSTOMER IMAGE CACHE
+  // =========================================================
+
+  async function loadCachedImage(
+    storagePath:
+      string
+  ): Promise<FabricImage> {
+    const cachedElement =
+      designImageCache.get(
+        storagePath
+      );
+
+    if (
+      cachedElement
+    ) {
+      return new FabricImage(
+        cachedElement
+      );
+    }
+
+    const existingPromise =
+      designImagePromiseCache.get(
+        storagePath
+      );
+
+    if (
+      existingPromise
+    ) {
+      const element =
+        await existingPromise;
+
+      return new FabricImage(
+        element
+      );
+    }
+
+    const loadPromise =
+      (
+        async () => {
+          const signedUrl =
+            await getCachedAssetUrl(
+              storagePath
+            );
+
+          const fabricImage =
+            await FabricImage.fromURL(
+              signedUrl,
+              {
+                crossOrigin:
+                  "anonymous",
+              }
+            );
+
+          const element =
+            fabricImage.getElement();
+
+          if (
+            !(
+              element instanceof
+              HTMLImageElement
+            )
+          ) {
+            throw new Error(
+              `Unable to decode design image: ${storagePath}`
+            );
+          }
+
+          designImageCache.set(
+            storagePath,
+            element
+          );
+
+          return element;
+        }
+      )();
+
+    designImagePromiseCache.set(
+      storagePath,
+      loadPromise
+    );
+
+    try {
+      const element =
+        await loadPromise;
+
+      return new FabricImage(
+        element
+      );
+    } finally {
+      designImagePromiseCache.delete(
+        storagePath
+      );
+    }
+  }
+
+  // =========================================================
+  // PRODUCT MOCKUP CACHE
+  // =========================================================
+
+  async function loadCachedProductImage(
+    view:
+      ProductView,
+
+    color:
+      ProductColor
+  ): Promise<FabricImage> {
+    const source =
+      productAssets[
+        product.type
+      ]?.[
+        color
+      ]?.[
+        view
+      ];
+
+    const display =
+      productDisplay[
+        product.type
+      ]?.[
+        view
+      ];
+
+    if (
+      !source ||
+      !display
+    ) {
+      throw new Error(
+        `Missing designer configuration for ${product.type} / ${color} / ${view}`
+      );
+    }
+
+    const cacheKey =
+      `${product.type}:${color}:${view}`;
+
+    const cachedElement =
+      productImageCache.get(
+        cacheKey
+      );
+
+    if (
+      cachedElement
+    ) {
+      return new FabricImage(
+        cachedElement
+      );
+    }
+
+    const existingPromise =
+      productImagePromiseCache.get(
+        cacheKey
+      );
+
+    if (
+      existingPromise
+    ) {
+      const element =
+        await existingPromise;
+
+      return new FabricImage(
+        element
+      );
+    }
+
+    const loadPromise =
+      (
+        async () => {
+          const fabricImage =
+            await FabricImage.fromURL(
+              source
+            );
+
+          const element =
+            fabricImage.getElement();
+
+          if (
+            !(
+              element instanceof
+              HTMLImageElement
+            )
+          ) {
+            throw new Error(
+              `Unable to load product image: ${cacheKey}`
+            );
+          }
+
+          productImageCache.set(
+            cacheKey,
+            element
+          );
+
+          return element;
+        }
+      )();
+
+    productImagePromiseCache.set(
+      cacheKey,
+      loadPromise
+    );
+
+    try {
+      const element =
+        await loadPromise;
+
+      return new FabricImage(
+        element
+      );
+    } finally {
+      productImagePromiseCache.delete(
+        cacheKey
+      );
+    }
+  }
+
+  // =========================================================
   // CREATE CANVAS
   // =========================================================
 
   useEffect(() => {
-    if (!canvasElementRef.current) {
+    if (
+      !canvasElementRef.current
+    ) {
       return;
     }
 
-    const canvas = new Canvas(
-      canvasElementRef.current,
-      {
-        width: 700,
-        height: 700,
-        backgroundColor: "#e5e7eb",
-        preserveObjectStacking: true,
-      }
-    );
+    const canvas =
+      new Canvas(
+        canvasElementRef.current,
+        {
+          width:
+            700,
 
-    canvasRef.current = canvas;
+          height:
+            700,
 
-    // =======================================================
-    // SELECTION HANDLER
-    // =======================================================
+          backgroundColor:
+            "#e5e7eb",
 
-    const updateSelection = () => {
-      const activeObject =
-        canvas.getActiveObject();
+          preserveObjectStacking:
+            true,
+        }
+      );
 
-      if (
-        activeObject &&
-        isTextObject(activeObject)
-      ) {
-        selectText(activeObject);
-      } else {
+    canvasRef.current =
+      canvas;
+
+    previousViewRef.current =
+      currentView;
+
+    const updateSelection =
+      () => {
+        const activeObject =
+          canvas.getActiveObject();
+
+        if (
+          activeObject &&
+          isTextObject(
+            activeObject
+          )
+        ) {
+          selectText(
+            activeObject
+          );
+        } else {
+          clearTextSelection();
+        }
+      };
+
+    const handleSelectionCleared =
+      () => {
         clearTextSelection();
-      }
-    };
+      };
 
-    // =======================================================
-    // SELECTION CREATED
-    // =======================================================
+    const handleMouseDown =
+      (
+        event:
+          any
+      ) => {
+        const target =
+          event.target as
+            FabricObject | null;
+
+        if (
+          target &&
+          isTextObject(
+            target
+          )
+        ) {
+          selectText(
+            target
+          );
+        }
+      };
 
     canvas.on(
       "selection:created",
       updateSelection
     );
 
-    // =======================================================
-    // SELECTION UPDATED
-    // =======================================================
-
     canvas.on(
       "selection:updated",
       updateSelection
     );
-
-    // =======================================================
-    // SELECTION CLEARED
-    // =======================================================
-
-    const handleSelectionCleared = () => {
-      clearTextSelection();
-    };
 
     canvas.on(
       "selection:cleared",
       handleSelectionCleared
     );
 
-    // =======================================================
-    // MOUSE DOWN
-    //
-    // IMPORTANT:
-    // Use instanceof IText instead of
-    // target.type === "IText"
-    // =======================================================
-
-    const handleMouseDown = (
-      event: any
-    ) => {
-      const target =
-        event.target;
-
-      if (
-        target &&
-        isTextObject(target)
-      ) {
-        selectText(target);
-      }
-    };
-
     canvas.on(
       "mouse:down",
       handleMouseDown
     );
 
-    // =======================================================
-    // INITIAL PRODUCT
-    // =======================================================
-
     void loadProduct(
       currentView,
       productColor
     );
-
-    // =======================================================
-    // CLEANUP
-    // =======================================================
 
     return () => {
       canvas.off(
@@ -349,16 +818,19 @@ export function useFabricDesigner(
 
       canvas.dispose();
 
-      canvasRef.current = null;
+      canvasRef.current =
+        null;
     };
   }, []);
 
   // =========================================================
-  // CHANGE SIDE
+  // VIEW CHANGE
   // =========================================================
 
   useEffect(() => {
-    if (!canvasRef.current) {
+    if (
+      !canvasRef.current
+    ) {
       return;
     }
 
@@ -369,15 +841,21 @@ export function useFabricDesigner(
       return;
     }
 
-    void switchSide(currentView);
-  }, [currentView]);
+    void switchSide(
+      currentView
+    );
+  }, [
+    currentView,
+  ]);
 
   // =========================================================
-  // CHANGE COLOR
+  // COLOR CHANGE
   // =========================================================
 
   useEffect(() => {
-    if (!canvasRef.current) {
+    if (
+      !canvasRef.current
+    ) {
       return;
     }
 
@@ -385,63 +863,113 @@ export function useFabricDesigner(
       currentView,
       productColor
     );
-  }, [productColor]);
+  }, [
+    productColor,
+  ]);
 
   // =========================================================
-  // SAVE CURRENT DESIGN
+  // SAVE CURRENT SIDE
   // =========================================================
 
   function saveCurrentDesign(
-    side: ProductView
+    side:
+      ProductView
   ) {
     const canvas =
       canvasRef.current;
 
-    if (!canvas) {
-      return;
-    }
-
-    const objects = canvas
-      .getObjects()
-      .filter(
-        (obj) =>
-          !(obj as any).data
-            ?.isProduct
-      );
-
-    designsRef.current[side] =
-      objects.map((obj) =>
-        obj.toObject(["data"])
-      );
-  }
-
-  // =========================================================
-  // RESTORE DESIGN
-  // =========================================================
-
-  async function restoreDesign(
-    side: ProductView
-  ) {
-    const canvas =
-      canvasRef.current;
-
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return;
     }
 
     const objects =
-      designsRef.current[side];
+      canvas
+        .getObjects()
+        .filter(
+          (
+            object
+          ) =>
+            !(
+              object as any
+            ).data
+              ?.isProduct
+        );
+
+    designsRef.current[
+      side
+    ] =
+      objects.map(
+        (
+          object
+        ) => {
+          const serialized =
+            object.toObject([
+              "data",
+            ]) as any;
+
+          if (
+            serialized.type ===
+              "Image" &&
+            serialized.data
+              ?.storagePath
+          ) {
+            serialized.src =
+              null;
+          }
+
+          return serialized;
+        }
+      );
+  }
+
+  // =========================================================
+  // RESTORE SIDE
+  // =========================================================
+
+  async function restoreDesign(
+    side:
+      ProductView,
+
+    requestId?:
+      number
+  ) {
+    const canvas =
+      canvasRef.current;
+
+    if (
+      !canvas
+    ) {
+      return;
+    }
+
+    const requestIsStale =
+      () =>
+        requestId !==
+          undefined &&
+        requestId !==
+          switchRequestRef.current;
+
+    const objects =
+      designsRef.current[
+        side
+      ];
 
     for (
-      const objectData of objects
+      const objectData
+      of objects
     ) {
-      // =====================================================
-      // SKIP PRODUCT
-      // =====================================================
+      if (
+        requestIsStale()
+      ) {
+        return;
+      }
 
       if (
-        (objectData as any).data
-          ?.isProduct
+        (
+          objectData as any
+        ).data?.isProduct
       ) {
         continue;
       }
@@ -452,35 +980,128 @@ export function useFabricDesigner(
 
       if (
         objectData.type ===
-          "Image" &&
-        (objectData as any).src
+        "Image"
       ) {
-        const image =
-          await FabricImage.fromURL(
-            (objectData as any).src
-          );
+        const storagePath =
+          (
+            objectData as any
+          ).data
+            ?.storagePath as
+            | string
+            | undefined;
+
+        let image:
+          FabricImage | null =
+          null;
+
+        if (
+          storagePath
+        ) {
+          try {
+            image =
+              await loadCachedImage(
+                storagePath
+              );
+          } catch (
+            error
+          ) {
+            console.error(
+              "Unable to restore image:",
+              storagePath,
+              error
+            );
+
+            continue;
+          }
+        } else {
+          const source =
+            (
+              objectData as any
+            ).src;
+
+          if (
+            typeof source !==
+            "string"
+          ) {
+            continue;
+          }
+
+          if (
+            source.startsWith(
+              "blob:"
+            )
+          ) {
+            continue;
+          }
+
+          try {
+            image =
+              await FabricImage.fromURL(
+                source,
+                {
+                  crossOrigin:
+                    "anonymous",
+                }
+              );
+          } catch (
+            error
+          ) {
+            console.error(
+              "Unable to restore local image:",
+              error
+            );
+
+            continue;
+          }
+        }
+
+        if (
+          !image ||
+          requestIsStale()
+        ) {
+          return;
+        }
 
         image.set({
           left:
             objectData.left,
+
           top:
             objectData.top,
+
           scaleX:
             objectData.scaleX,
+
           scaleY:
             objectData.scaleY,
+
           angle:
             objectData.angle,
+
           originX:
             objectData.originX,
+
           originY:
             objectData.originY,
 
-          selectable: true,
-          evented: true,
+          selectable:
+            true,
+
+          evented:
+            true,
         });
 
-        canvas.add(image);
+        (
+          image as any
+        ).data = {
+          ...(
+            objectData as any
+          ).data,
+        };
+
+        canvas.add(
+          image
+        );
 
         continue;
       }
@@ -493,10 +1114,38 @@ export function useFabricDesigner(
         objectData.type ===
         "IText"
       ) {
+        const fontFamily =
+          (
+            objectData as any
+          ).fontFamily ??
+          "Arial";
+
+        const fontSize =
+          (
+            objectData as any
+          ).fontSize ??
+          40;
+
+        try {
+          await document.fonts.load(
+            `${fontSize}px "${fontFamily}"`
+          );
+        } catch {
+          // Browser fallback okay.
+        }
+
+        if (
+          requestIsStale()
+        ) {
+          return;
+        }
+
         const textObject =
           new IText(
-            (objectData as any)
-              .text ?? "",
+            (
+              objectData as any
+            ).text ??
+              "",
             {
               left:
                 objectData.left,
@@ -519,23 +1168,19 @@ export function useFabricDesigner(
               originY:
                 objectData.originY,
 
-              fontSize:
-                (objectData as any)
-                  .fontSize ?? 40,
+              fontSize,
 
               fill:
                 typeof (
                   objectData as any
-                ).fill === "string"
+                ).fill ===
+                "string"
                   ? (
                       objectData as any
                     ).fill
                   : "#000000",
 
-              fontFamily:
-                (objectData as any)
-                  .fontFamily ??
-                "Arial",
+              fontFamily,
 
               fontWeight:
                 (
@@ -559,14 +1204,27 @@ export function useFabricDesigner(
                 ).underline ??
                 false,
 
-              editable: true,
-              selectable: true,
-              evented: true,
+              editable:
+                true,
+
+              selectable:
+                true,
+
+              evented:
+                true,
             }
           );
 
-        canvas.add(textObject);
+        canvas.add(
+          textObject
+        );
       }
+    }
+
+    if (
+      requestIsStale()
+    ) {
+      return;
     }
 
     canvas.requestRenderAll();
@@ -577,46 +1235,60 @@ export function useFabricDesigner(
   // =========================================================
 
   async function loadProduct(
-    view: ProductView,
-    color: ProductColor
+    view:
+      ProductView,
+
+    color:
+      ProductColor
   ) {
     const canvas =
       canvasRef.current;
 
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return;
     }
-
-    // =======================================================
-    // REMOVE OLD PRODUCT
-    // =======================================================
-
-    canvas
-      .getObjects()
-      .forEach((obj) => {
-        if (
-          (obj as any).data
-            ?.isProduct
-        ) {
-          canvas.remove(obj);
-        }
-      });
-
-    // =======================================================
-    // LOAD PRODUCT IMAGE
-    // =======================================================
-
-    const image =
-      await FabricImage.fromURL(
-        productAssets[
-          product.type
-        ][color][view]
-      );
 
     const display =
       productDisplay[
         product.type
-      ][view];
+      ]?.[
+        view
+      ];
+
+    if (
+      !display
+    ) {
+      throw new Error(
+        `Missing display configuration for ${product.type} / ${view}`
+      );
+    }
+
+    canvas
+      .getObjects()
+      .forEach(
+        (
+          object
+        ) => {
+          if (
+            (
+              object as any
+            ).data
+              ?.isProduct
+          ) {
+            canvas.remove(
+              object
+            );
+          }
+        }
+      );
+
+    const image =
+      await loadCachedProductImage(
+        view,
+        color
+      );
 
     image.scaleToWidth(
       display.width
@@ -642,14 +1314,16 @@ export function useFabricDesigner(
         false,
     });
 
-    (image as any).data = {
-      isProduct: true,
+    (
+      image as any
+    ).data = {
+      isProduct:
+        true,
     };
 
-    productRef.current =
-      image;
-
-    canvas.add(image);
+    canvas.add(
+      image
+    );
 
     canvas.moveObjectTo(
       image,
@@ -664,71 +1338,94 @@ export function useFabricDesigner(
   // =========================================================
 
   async function switchSide(
-    view: ProductView
+    view:
+      ProductView
   ) {
     const canvas =
       canvasRef.current;
 
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return;
     }
 
-    // Save current side
+    const requestId =
+      ++switchRequestRef.current;
+
+    const oldView =
+      previousViewRef.current;
+
     saveCurrentDesign(
-      previousViewRef.current
+      oldView
     );
 
-    // Clear selection
     selectedTextRef.current =
       null;
 
     canvas.discardActiveObject();
 
-    // =======================================================
-    // REMOVE DESIGN OBJECTS
-    // =======================================================
+    clearTextSelection();
 
     canvas
       .getObjects()
-      .forEach((obj) => {
-        if (
-          !(obj as any).data
-            ?.isProduct
-        ) {
-          canvas.remove(obj);
+      .forEach(
+        (
+          object
+        ) => {
+          if (
+            !(
+              object as any
+            ).data
+              ?.isProduct
+          ) {
+            canvas.remove(
+              object
+            );
+          }
         }
-      });
-
-    // =======================================================
-    // LOAD PRODUCT
-    // =======================================================
+      );
 
     await loadProduct(
       view,
       productColor
     );
 
-    // =======================================================
-    // RESTORE DESIGN
-    // =======================================================
+    if (
+      requestId !==
+      switchRequestRef.current
+    ) {
+      return;
+    }
 
-    await restoreDesign(view);
+    await restoreDesign(
+      view,
+      requestId
+    );
 
-    canvas.requestRenderAll();
+    if (
+      requestId !==
+      switchRequestRef.current
+    ) {
+      return;
+    }
 
     previousViewRef.current =
       view;
 
-    clearTextSelection();
+    canvas.requestRenderAll();
   }
 
   // =========================================================
-  // UPDATE PRODUCT COLOR
+  // COLOR
   // =========================================================
 
   async function updateProductColor(
-    view: ProductView,
-    color: ProductColor
+    view:
+      ProductView,
+
+    color:
+      ProductColor
   ) {
     await loadProduct(
       view,
@@ -737,118 +1434,358 @@ export function useFabricDesigner(
   }
 
   // =========================================================
+  // WAIT FOR UPLOADS
+  // =========================================================
+
+  async function waitForPendingUploads() {
+    while (
+      pendingUploadCountRef.current >
+      0
+    ) {
+      await new Promise<void>(
+        (
+          resolve
+        ) => {
+          window.setTimeout(
+            resolve,
+            50
+          );
+        }
+      );
+    }
+  }
+
+  // =========================================================
   // ADD IMAGE
   // =========================================================
 
   async function addImage(
-    file: File
+    file:
+      File,
+
+    userId?:
+      string
   ) {
     const canvas =
       canvasRef.current;
 
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return;
     }
 
-    const reader =
-      new FileReader();
-
-    reader.onload = async () => {
-      const result =
-        reader.result;
-
-      if (
-        typeof result !==
-        "string"
-      ) {
-        return;
-      }
-
-      const image =
-        await FabricImage.fromURL(
-          result
-        );
-
-      image.scaleToWidth(
-        120
+    const localUrl =
+      await fileToDataUrl(
+        file
       );
 
-      image.set({
-        left: 350,
-        top: 320,
+    const image =
+      await FabricImage.fromURL(
+        localUrl
+      );
 
-        originX:
-          "center",
+    image.scaleToWidth(
+      120
+    );
 
-        originY:
-          "center",
+    image.set({
+      left:
+        350,
 
-        selectable:
+      top:
+        320,
+
+      originX:
+        "center",
+
+      originY:
+        "center",
+
+      selectable:
+        true,
+
+      evented:
+        true,
+    });
+
+    const uploadId =
+      crypto.randomUUID();
+
+    // =====================================================
+    // GUEST
+    // =====================================================
+
+    if (
+      !userId
+    ) {
+      (
+        image as any
+      ).data = {
+        guestImage:
           true,
 
-        evented:
-          true,
-      });
+        pendingUpload:
+          false,
 
-      canvas.add(image);
+        uploadId,
+
+        originalFileName:
+          file.name,
+      };
+
+      canvas.add(
+        image
+      );
 
       canvas.setActiveObject(
         image
       );
 
       canvas.requestRenderAll();
+
+      saveCurrentDesign(
+        previousViewRef.current
+      );
+
+      return;
+    }
+
+    // =====================================================
+    // SIGNED-IN USER
+    // =====================================================
+
+    (
+      image as any
+    ).data = {
+      pendingUpload:
+        true,
+
+      uploadId,
+
+      originalFileName:
+        file.name,
     };
 
-    reader.readAsDataURL(file);
+    canvas.add(
+      image
+    );
+
+    canvas.setActiveObject(
+      image
+    );
+
+    canvas.requestRenderAll();
+
+    pendingUploadCountRef.current +=
+      1;
+
+    try {
+      const storagePath =
+        await uploadDesignAsset(
+          file,
+          userId
+        );
+
+      (
+        image as any
+      ).data = {
+        ...(
+          image as any
+        ).data,
+
+        pendingUpload:
+          false,
+
+        storagePath,
+
+        originalFileName:
+          file.name,
+      };
+
+      (
+        Object.keys(
+          designsRef.current
+        ) as ProductView[]
+      ).forEach(
+        (
+          side
+        ) => {
+          designsRef.current[
+            side
+          ].forEach(
+            (
+              savedObject
+            ) => {
+              if (
+                (
+                  savedObject as any
+                ).data
+                  ?.uploadId !==
+                uploadId
+              ) {
+                return;
+              }
+
+              (
+                savedObject as any
+              ).data = {
+                ...(
+                  savedObject as any
+                ).data,
+
+                pendingUpload:
+                  false,
+
+                storagePath,
+
+                originalFileName:
+                  file.name,
+              };
+
+              (
+                savedObject as any
+              ).src =
+                null;
+            }
+          );
+        }
+      );
+
+      const element =
+        image.getElement();
+
+      if (
+        element instanceof
+        HTMLImageElement
+      ) {
+        designImageCache.set(
+          storagePath,
+          element
+        );
+      }
+
+      saveCurrentDesign(
+        previousViewRef.current
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Image upload failed:",
+        error
+      );
+
+      (
+        image as any
+      ).data = {
+        ...(
+          image as any
+        ).data,
+
+        pendingUpload:
+          false,
+
+        uploadFailed:
+          true,
+      };
+
+      saveCurrentDesign(
+        previousViewRef.current
+      );
+
+      throw error;
+    } finally {
+      pendingUploadCountRef.current =
+        Math.max(
+          0,
+          pendingUploadCountRef.current -
+            1
+        );
+    }
   }
 
   // =========================================================
   // ADD TEXT
   // =========================================================
 
-  async function addText(text: string) {
-    const canvas = canvasRef.current;
+  async function addText(
+    text:
+      string
+  ) {
+    const canvas =
+      canvasRef.current;
 
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return;
     }
 
     await document.fonts.ready;
 
-    const textObject = new IText(text, {
-      left: 350,
-      top: 320,
+    const textObject =
+      new IText(
+        text,
+        {
+          left:
+            350,
 
-      originX: "center",
-      originY: "center",
+          top:
+            320,
 
-      fontSize: 40,
-      fill: "#000000",
+          originX:
+            "center",
 
-      fontFamily: "Poppins",
+          originY:
+            "center",
 
-      fontWeight: "normal",
-      fontStyle: "normal",
-      underline: false,
+          fontSize:
+            40,
 
-      editable: true,
-      selectable: true,
-      evented: true,
-    });
+          fill:
+            "#000000",
 
-    canvas.add(textObject);
+          fontFamily:
+            "Poppins",
 
-    canvas.setActiveObject(textObject);
+          fontWeight:
+            "normal",
 
-    selectedTextRef.current = textObject;
+          fontStyle:
+            "normal",
 
-    selectText(textObject);
+          underline:
+            false,
+
+          editable:
+            true,
+
+          selectable:
+            true,
+
+          evented:
+            true,
+        }
+      );
+
+    canvas.add(
+      textObject
+    );
+
+    canvas.setActiveObject(
+      textObject
+    );
+
+    selectText(
+      textObject
+    );
 
     canvas.requestRenderAll();
   }
 
   // =========================================================
-  // GET SELECTED TEXT
+  // SELECTED TEXT
   // =========================================================
 
   function getSelectedText():
@@ -856,7 +1793,9 @@ export function useFabricDesigner(
     const canvas =
       canvasRef.current;
 
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return null;
     }
 
@@ -865,7 +1804,9 @@ export function useFabricDesigner(
 
     if (
       activeObject &&
-      isTextObject(activeObject)
+      isTextObject(
+        activeObject
+      )
     ) {
       selectedTextRef.current =
         activeObject;
@@ -876,16 +1817,14 @@ export function useFabricDesigner(
     return selectedTextRef.current;
   }
 
-  // =========================================================
-  // GET SELECTED TEXT STYLE
-  // =========================================================
-
   function getSelectedTextStyle():
     TextStyle | null {
     const textObject =
       getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return null;
     }
 
@@ -893,10 +1832,6 @@ export function useFabricDesigner(
       textObject
     );
   }
-
-  // =========================================================
-  // REFRESH CANVAS
-  // =========================================================
 
   function refreshCanvas() {
     canvasRef.current
@@ -908,17 +1843,21 @@ export function useFabricDesigner(
   // =========================================================
 
   function updateSelectedTextColor(
-    color: string
+    color:
+      string
   ) {
     const textObject =
       getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return;
     }
 
     textObject.set({
-      fill: color,
+      fill:
+        color,
     });
 
     onTextStyleChangeRef.current?.(
@@ -935,17 +1874,24 @@ export function useFabricDesigner(
   // =========================================================
 
   async function updateSelectedFont(
-    fontFamily: string
+    fontFamily:
+      string
   ) {
-    const textObject = getSelectedText();
+    const textObject =
+      getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return;
     }
 
     try {
       await document.fonts.load(
-        `40px "${fontFamily}"`
+        `${
+          textObject.fontSize ??
+          40
+        }px "${fontFamily}"`
       );
 
       textObject.set({
@@ -953,14 +1899,19 @@ export function useFabricDesigner(
       });
 
       textObject.initDimensions();
+
       textObject.setCoords();
 
       onTextStyleChangeRef.current?.(
-        getTextStyle(textObject)
+        getTextStyle(
+          textObject
+        )
       );
 
       refreshCanvas();
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Font loading failed:",
         error
@@ -968,27 +1919,22 @@ export function useFabricDesigner(
     }
   }
 
-  // =========================================================
-  // BOLD
-  // =========================================================
-
   function toggleBold() {
     const textObject =
       getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return;
     }
 
-    const newWeight =
-      textObject.fontWeight ===
-      "bold"
-        ? "normal"
-        : "bold";
-
     textObject.set({
       fontWeight:
-        newWeight,
+        textObject.fontWeight ===
+        "bold"
+          ? "normal"
+          : "bold",
     });
 
     onTextStyleChangeRef.current?.(
@@ -999,28 +1945,23 @@ export function useFabricDesigner(
 
     refreshCanvas();
   }
-
-  // =========================================================
-  // ITALIC
-  // =========================================================
 
   function toggleItalic() {
     const textObject =
       getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return;
     }
 
-    const newStyle =
-      textObject.fontStyle ===
-      "italic"
-        ? "normal"
-        : "italic";
-
     textObject.set({
       fontStyle:
-        newStyle,
+        textObject.fontStyle ===
+        "italic"
+          ? "normal"
+          : "italic",
     });
 
     onTextStyleChangeRef.current?.(
@@ -1032,15 +1973,13 @@ export function useFabricDesigner(
     refreshCanvas();
   }
 
-  // =========================================================
-  // UNDERLINE
-  // =========================================================
-
   function toggleUnderline() {
     const textObject =
       getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return;
     }
 
@@ -1058,17 +1997,16 @@ export function useFabricDesigner(
     refreshCanvas();
   }
 
-  // =========================================================
-  // FONT SIZE
-  // =========================================================
-
   function changeFontSize(
-    amount: number
+    amount:
+      number
   ) {
     const textObject =
       getSelectedText();
 
-    if (!textObject) {
+    if (
+      !textObject
+    ) {
       return;
     }
 
@@ -1091,6 +2029,10 @@ export function useFabricDesigner(
         newSize,
     });
 
+    textObject.initDimensions();
+
+    textObject.setCoords();
+
     onTextStyleChangeRef.current?.(
       getTextStyle(
         textObject
@@ -1101,28 +2043,33 @@ export function useFabricDesigner(
   }
 
   // =========================================================
-  // DELETE SELECTED
+  // DELETE
   // =========================================================
 
   function deleteSelected() {
     const canvas =
       canvasRef.current;
 
-    if (!canvas) {
+    if (
+      !canvas
+    ) {
       return;
     }
 
     const activeObject =
       canvas.getActiveObject();
 
-    if (!activeObject) {
+    if (
+      !activeObject
+    ) {
       return;
     }
 
-    // Never delete shirt
     if (
-      (activeObject as any)
-        .data?.isProduct
+      (
+        activeObject as any
+      ).data
+        ?.isProduct
     ) {
       return;
     }
@@ -1133,12 +2080,7 @@ export function useFabricDesigner(
 
     canvas.discardActiveObject();
 
-    selectedTextRef.current =
-      null;
-
-    onSelectionChangeRef.current?.(
-      false
-    );
+    clearTextSelection();
 
     canvas.requestRenderAll();
   }
@@ -1149,12 +2091,12 @@ export function useFabricDesigner(
 
   useEffect(() => {
     function handleKeyDown(
-      e: KeyboardEvent
+      event:
+        KeyboardEvent
     ) {
-      // Don't delete objects while typing
-      // inside an input/select/textarea.
       const target =
-        e.target as HTMLElement;
+        event.target as
+          HTMLElement | null;
 
       if (
         target?.tagName ===
@@ -1168,8 +2110,10 @@ export function useFabricDesigner(
       }
 
       if (
-        e.key !== "Delete" &&
-        e.key !== "Backspace"
+        event.key !==
+          "Delete" &&
+        event.key !==
+          "Backspace"
       ) {
         return;
       }
@@ -1177,25 +2121,31 @@ export function useFabricDesigner(
       const canvas =
         canvasRef.current;
 
-      if (!canvas) {
+      if (
+        !canvas
+      ) {
         return;
       }
 
       const activeObject =
         canvas.getActiveObject();
 
-      if (!activeObject) {
-        return;
-      }
-
       if (
-        (activeObject as any)
-          .data?.isProduct
+        !activeObject
       ) {
         return;
       }
 
-      e.preventDefault();
+      if (
+        (
+          activeObject as any
+        ).data
+          ?.isProduct
+      ) {
+        return;
+      }
+
+      event.preventDefault();
 
       canvas.remove(
         activeObject
@@ -1203,12 +2153,7 @@ export function useFabricDesigner(
 
       canvas.discardActiveObject();
 
-      selectedTextRef.current =
-        null;
-
-      onSelectionChangeRef.current?.(
-        false
-      );
+      clearTextSelection();
 
       canvas.requestRenderAll();
     }
@@ -1226,88 +2171,493 @@ export function useFabricDesigner(
     };
   }, []);
 
-  function getCustomizationSummary() {
-    const canvas = canvasRef.current;
+  // =========================================================
+  // EXPORT DESIGN DATA
+  // =========================================================
 
-    let textCount = 0;
-    let imageCount = 0;
-    let premiumFontUsed = false;
+  function getDesignData():
+    DesignData {
+    saveCurrentDesign(
+      previousViewRef.current
+    );
 
-    if (!canvas) {
-      return {
-        textCount,
-        imageCount,
-        premiumFontUsed,
-      };
-    }
+    return {
+      front: [
+        ...designsRef.current
+          .front,
+      ],
 
-    const inspectObjects = (
-      objects: ReturnType<
-        FabricObject["toObject"]
-      >[]
-    ) => {
-      objects.forEach((object) => {
-        if (
-          object.type === "IText"
-        ) {
-          textCount += 1;
+      back: [
+        ...designsRef.current
+          .back,
+      ],
 
-          const fontFamily =
-            (object as any)
-              .fontFamily;
+      left: [
+        ...designsRef.current
+          .left,
+      ],
 
+      right: [
+        ...designsRef.current
+          .right,
+      ],
+    };
+  }
+
+  // =========================================================
+  // PRELOAD SAVED ASSETS
+  // =========================================================
+
+  async function preloadDesignAssets(
+    designData:
+      DesignData
+  ) {
+    const storagePaths =
+      new Set<string>();
+
+    (
+      Object.keys(
+        designData
+      ) as ProductView[]
+    ).forEach(
+      (
+        side
+      ) => {
+        designData[
+          side
+        ].forEach(
+          (
+            object
+          ) => {
+            if (
+              object.type !==
+              "Image"
+            ) {
+              return;
+            }
+
+            const storagePath =
+              (
+                object as any
+              ).data
+                ?.storagePath;
+
+            if (
+              typeof storagePath ===
+              "string"
+            ) {
+              storagePaths.add(
+                storagePath
+              );
+            }
+          }
+        );
+      }
+    );
+
+    await Promise.all(
+      Array.from(
+        storagePaths
+      ).map(
+        async (
+          storagePath
+        ) => {
           if (
-            premiumFonts.includes(
-              fontFamily
+            designImageCache.has(
+              storagePath
             )
           ) {
-            premiumFontUsed =
-              true;
+            return;
+          }
+
+          try {
+            await loadCachedImage(
+              storagePath
+            );
+          } catch (
+            error
+          ) {
+            console.error(
+              "Unable to preload asset:",
+              storagePath,
+              error
+            );
           }
         }
+      )
+    );
+  }
 
-        if (
-          object.type === "Image"
-        ) {
-          imageCount += 1;
-        }
-      });
+  // =========================================================
+  // LOAD SAVED DESIGN
+  // =========================================================
+
+  async function loadDesignData(
+    designData:
+      DesignData,
+
+    initialView:
+      ProductView =
+        "front"
+  ) {
+    const canvas =
+      canvasRef.current;
+
+    if (
+      !canvas
+    ) {
+      return;
+    }
+
+    const requestId =
+      ++switchRequestRef.current;
+
+    designsRef.current = {
+      front: [
+        ...(
+          designData.front ??
+          []
+        ),
+      ],
+
+      back: [
+        ...(
+          designData.back ??
+          []
+        ),
+      ],
+
+      left: [
+        ...(
+          designData.left ??
+          []
+        ),
+      ],
+
+      right: [
+        ...(
+          designData.right ??
+          []
+        ),
+      ],
     };
 
-    // Current visible side
-    const currentObjects =
-      canvas
-        .getObjects()
-        .filter(
-          (object) =>
-            !(object as any)
-              .data?.isProduct
-        )
-        .map((object) =>
-          object.toObject(["data"])
+    selectedTextRef.current =
+      null;
+
+    canvas.discardActiveObject();
+
+    clearTextSelection();
+
+    canvas
+      .getObjects()
+      .forEach(
+        (
+          object
+        ) => {
+          if (
+            !(
+              object as any
+            ).data
+              ?.isProduct
+          ) {
+            canvas.remove(
+              object
+            );
+          }
+        }
+      );
+
+    previousViewRef.current =
+      initialView;
+
+    await loadProduct(
+      initialView,
+      productColor
+    );
+
+    if (
+      requestId !==
+      switchRequestRef.current
+    ) {
+      return;
+    }
+
+    await restoreDesign(
+      initialView,
+      requestId
+    );
+
+    if (
+      requestId !==
+      switchRequestRef.current
+    ) {
+      return;
+    }
+
+    canvas.requestRenderAll();
+
+    void preloadDesignAssets(
+      designsRef.current
+    );
+
+    const views =
+      product.supportedViews;
+
+    void Promise.all(
+      views.map(
+        async (
+          view
+        ) => {
+          if (
+            view ===
+            initialView
+          ) {
+            return;
+          }
+
+          try {
+            await loadCachedProductImage(
+              view,
+              productColor
+            );
+          } catch (
+            error
+          ) {
+            console.error(
+              `Unable to preload ${view} product image:`,
+              error
+            );
+          }
+        }
+      )
+    );
+  }
+
+  // =========================================================
+  // PREVIEWS
+  // =========================================================
+
+  async function getAllPreviews(): Promise<
+    Partial<
+      Record<
+        ProductView,
+        string
+      >
+    >
+  > {
+    const canvas =
+      canvasRef.current;
+
+    if (
+      !canvas
+    ) {
+      return {};
+    }
+
+    saveCurrentDesign(
+      previousViewRef.current
+    );
+
+    const originalView =
+      previousViewRef.current;
+
+    const previews:
+      Partial<
+        Record<
+          ProductView,
+          string
+        >
+      > = {};
+
+    const views =
+      product.supportedViews;
+
+    for (
+      const view
+      of views
+    ) {
+      const objects =
+        designsRef.current[
+          view
+        ];
+
+      const hasCustomerContent =
+        objects.some(
+          (
+            object
+          ) => {
+            if (
+              object.type ===
+              "IText"
+            ) {
+              return true;
+            }
+
+            if (
+              object.type ===
+              "Image"
+            ) {
+              const storagePath =
+                (
+                  object as any
+                ).data
+                  ?.storagePath;
+
+              const source =
+                (
+                  object as any
+                ).src;
+
+              return Boolean(
+                storagePath ||
+                  (
+                    typeof source ===
+                      "string" &&
+                    !source.startsWith(
+                      "blob:"
+                    )
+                  )
+              );
+            }
+
+            return false;
+          }
         );
 
-    // Current view hasn't necessarily been
-    // written into designsRef yet.
-    inspectObjects(currentObjects);
+      if (
+        !hasCustomerContent
+      ) {
+        continue;
+      }
 
-    // Other stored sides
+      if (
+        previousViewRef.current !==
+        view
+      ) {
+        await switchSide(
+          view
+        );
+      }
+
+      canvas.discardActiveObject();
+
+      canvas.requestRenderAll();
+
+      previews[
+        view
+      ] =
+        canvas.toDataURL({
+          format:
+            "png",
+
+          quality:
+            1,
+
+          multiplier:
+            1,
+        });
+    }
+
+    if (
+      previousViewRef.current !==
+      originalView
+    ) {
+      await switchSide(
+        originalView
+      );
+    }
+
+    return previews;
+  }
+
+  // =========================================================
+  // SUMMARY
+  // =========================================================
+
+  function getCustomizationSummary() {
+    let textCount =
+      0;
+
+    let imageCount =
+      0;
+
+    let premiumFontUsed =
+      false;
+
+    saveCurrentDesign(
+      previousViewRef.current
+    );
+
     (
       Object.keys(
         designsRef.current
       ) as ProductView[]
-    ).forEach((side) => {
-      if (
-        side ===
-        previousViewRef.current
-      ) {
-        return;
-      }
+    ).forEach(
+      (
+        side
+      ) => {
+        designsRef.current[
+          side
+        ].forEach(
+          (
+            object
+          ) => {
+            if (
+              object.type ===
+              "IText"
+            ) {
+              textCount +=
+                1;
 
-      inspectObjects(
-        designsRef.current[side]
-      );
-    });
+              const fontFamily =
+                (
+                  object as any
+                ).fontFamily;
+
+              if (
+                premiumFonts.includes(
+                  fontFamily
+                )
+              ) {
+                premiumFontUsed =
+                  true;
+              }
+            }
+
+            if (
+              object.type ===
+              "Image"
+            ) {
+              const storagePath =
+                (
+                  object as any
+                ).data
+                  ?.storagePath;
+
+              const source =
+                (
+                  object as any
+                ).src;
+
+              if (
+                storagePath ||
+                (
+                  typeof source ===
+                    "string" &&
+                  !source.startsWith(
+                    "blob:"
+                  )
+                )
+              ) {
+                imageCount +=
+                  1;
+              }
+            }
+          }
+        );
+      }
+    );
 
     return {
       textCount,
@@ -1317,36 +2667,45 @@ export function useFabricDesigner(
   }
 
   // =========================================================
-  // EXPOSE API TO CANVAS AREA
+  // EXPOSE
   // =========================================================
 
   useImperativeHandle(
     ref,
     () => ({
       addImage,
+
       addText,
+
       deleteSelected,
 
+      getPreview,
+
+      getAllPreviews,
+
+      getDesignData,
+
+      getCustomizationSummary,
+
       updateSelectedTextColor,
+
       updateSelectedFont,
 
       toggleBold,
+
       toggleItalic,
+
       toggleUnderline,
 
       changeFontSize,
 
       getSelectedTextStyle,
 
-      getCustomizationSummary,
-      getPreview,
-    }),
-    []
-  );
+      loadDesignData,
 
-  // =========================================================
-  // RETURN CANVAS REF
-  // =========================================================
+      waitForPendingUploads,
+    })
+  );
 
   return canvasElementRef;
 }

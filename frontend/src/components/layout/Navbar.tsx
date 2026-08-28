@@ -23,6 +23,8 @@ import logo from "../../assets/images/kingdom-threads-logo.png";
 
 import { useAuth } from "../../contexts/AuthContext";
 
+import { useCart } from "../../contexts/CartContext";
+
 export default function Navbar() {
   const navigate = useNavigate();
 
@@ -31,6 +33,12 @@ export default function Navbar() {
     loading,
     signOut,
   } = useAuth();
+
+  const {
+    cartCount,
+    clearCart,
+  } =
+    useCart();
 
   const [accountOpen, setAccountOpen] =
     useState(false);
@@ -97,6 +105,8 @@ export default function Navbar() {
     try {
       await signOut();
 
+      //clearCart();
+
       setAccountOpen(false);
 
       navigate("/");
@@ -161,6 +171,13 @@ export default function Navbar() {
           </Link>
 
           <Link
+            to="/customize"
+            className="transition hover:text-blue-600"
+          >
+            Customize
+          </Link>
+
+          <Link
             to="/orders"
             className="transition hover:text-blue-600"
           >
@@ -194,9 +211,13 @@ export default function Navbar() {
           >
             <ShoppingCart size={22} />
 
-            <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-              0
+            {cartCount > 0 && (
+            <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs text-white">
+                {cartCount > 99
+                ? "99+"
+                : cartCount}
             </span>
+            )}
           </Link>
 
           {/* =====================================

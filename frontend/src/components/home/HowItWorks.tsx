@@ -10,7 +10,7 @@ const steps = [
     icon: ShoppingBag,
     title: "Choose a Product",
     description:
-      "Browse our collection of premium apparel and accessories.",
+      "Choose from our range of products available for customization.",
   },
   {
     icon: Palette,

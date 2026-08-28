@@ -33,7 +33,7 @@ export default function Hero() {
             <br />
             Create.
             <br />
-            Wear.
+            Make It Yours.
           </h1>
 
           <p className="mt-6 text-lg leading-8 text-slate-300">
@@ -48,11 +48,14 @@ export default function Hero() {
           <div className="mt-8 flex flex-wrap gap-4">
 
             <Link
-              to="/shop"
+              to="/customize"
               className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-4 font-semibold transition hover:bg-blue-700"
             >
               Start Designing
-              <ArrowRight size={18} />
+
+              <ArrowRight
+                size={18}
+              />
             </Link>
 
             <Link

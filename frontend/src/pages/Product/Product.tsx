@@ -29,6 +29,11 @@ export default function Product() {
   const [quantity, setQuantity] =
     useState(1);
 
+  const size =
+  selectedSize ??
+  product.sizes[0];
+
+
   return (
     <div className="mx-auto max-w-7xl p-10">
 
@@ -151,7 +156,11 @@ export default function Product() {
               type="button"
               onClick={() =>
                 navigate(
-                  `/designer/${product.id}?color=${selectedColor}&size=${selectedSize}&quantity=${quantity}`
+                  `/designer/${product.id}?color=${encodeURIComponent(
+                    selectedColor
+                  )}&size=${encodeURIComponent(
+                    size
+                  )}&quantity=${quantity}`
                 )
               }
               className="rounded-lg bg-black px-8 py-3 text-white hover:bg-gray-800"

@@ -1,6 +1,32 @@
-import type { ProductView } from "../../../types/designer";
+import type {
+  ProductView,
+} from "../../../types/designer";
 
-export const productDisplay = {
+import type {
+  ProductType,
+} from "../../../types/product";
+
+export interface ProductDisplaySettings {
+  width: number;
+  left: number;
+  top: number;
+}
+
+type ProductDisplayConfig =
+  Partial<
+    Record<
+      ProductType,
+      Partial<
+        Record<
+          ProductView,
+          ProductDisplaySettings
+        >
+      >
+    >
+  >;
+
+export const productDisplay:
+  ProductDisplayConfig = {
   tshirt: {
     front: {
       width: 247,
@@ -26,14 +52,55 @@ export const productDisplay = {
       top: 350,
     },
   },
-} satisfies Record<
-  string,
-  Record<
-    ProductView,
-    {
-      width: number;
-      left: number;
-      top: number;
-    }
-  >
->;
+
+  hoodie: {
+    front: {
+      width: 290,
+      left: 350,
+      top: 350,
+    },
+
+    back: {
+      width: 285,
+      left: 350,
+      top: 350,
+    },
+
+    left: {
+      width: 270,
+      left: 350,
+      top: 350,
+    },
+
+    right: {
+      width: 270,
+      left: 350,
+      top: 350,
+    },
+  },
+  cap: {
+    front: {
+      width: 300,
+      left: 350,
+      top: 350,
+    },
+
+    back: {
+      width: 300,
+      left: 350,
+      top: 350,
+    },
+
+    left: {
+      width: 320,
+      left: 350,
+      top: 350,
+    },
+
+    right: {
+      width: 320,
+      left: 350,
+      top: 350,
+    },
+  },
+};

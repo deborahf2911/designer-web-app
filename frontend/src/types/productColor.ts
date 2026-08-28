@@ -3,4 +3,5 @@ export type ProductColor =
   | "black"
   | "navy"
   | "red"
-  | "green";
+  | "green"
+  | "brown";

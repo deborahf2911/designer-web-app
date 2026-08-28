@@ -22,7 +22,7 @@ export default function CTA() {
         </div>
 
         <Link
-          to="/shop"
+          to="/customize"
           className="shrink-0 rounded-xl bg-white px-10 py-5 text-lg font-bold text-blue-700 transition hover:scale-105 hover:bg-blue-50"
         >
           Start Designing

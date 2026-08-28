@@ -81,10 +81,12 @@ export default function Footer() {
         </div>
 
         {/* =====================================
-            SHOP
+            SHOP + CUSTOMIZE
         ===================================== */}
 
         <div>
+
+          {/* SHOP */}
 
           <h3 className="text-lg font-bold text-white">
             Shop
@@ -97,13 +99,50 @@ export default function Footer() {
                 to="/shop"
                 className="transition hover:text-white"
               >
-                T-Shirts
+                Ready-Made Products
               </Link>
             </li>
 
             <li>
               <Link
                 to="/shop"
+                className="transition hover:text-white"
+              >
+                New Arrivals
+              </Link>
+            </li>
+
+            <li>
+              <Link
+                to="/shop"
+                className="transition hover:text-white"
+              >
+                Featured Products
+              </Link>
+            </li>
+
+          </ul>
+
+          {/* CUSTOMIZE */}
+
+          <h3 className="mt-8 text-lg font-bold text-white">
+            Customize
+          </h3>
+
+          <ul className="mt-5 space-y-3 text-slate-400">
+
+            <li>
+              <Link
+                to="/customize"
+                className="transition hover:text-white"
+              >
+                T-Shirts
+              </Link>
+            </li>
+
+            <li>
+              <Link
+                to="/customize"
                 className="transition hover:text-white"
               >
                 Hoodies
@@ -112,7 +151,7 @@ export default function Footer() {
 
             <li>
               <Link
-                to="/shop"
+                to="/customize"
                 className="transition hover:text-white"
               >
                 Caps
@@ -121,19 +160,10 @@ export default function Footer() {
 
             <li>
               <Link
-                to="/shop"
+                to="/customize"
                 className="transition hover:text-white"
               >
                 Mugs
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                to="/shop"
-                className="transition hover:text-white"
-              >
-                Accessories
               </Link>
             </li>
 
@@ -168,6 +198,15 @@ export default function Footer() {
                 className="transition hover:text-white"
               >
                 Shop
+              </Link>
+            </li>
+
+            <li>
+              <Link
+                to="/customize"
+                className="transition hover:text-white"
+              >
+                Customize
               </Link>
             </li>
 

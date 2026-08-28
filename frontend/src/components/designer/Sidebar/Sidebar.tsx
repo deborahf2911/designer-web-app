@@ -3,6 +3,10 @@ import {
   type ChangeEvent,
 } from "react";
 
+import type {
+  Product,
+} from "../../../types/product";
+
 import type { ProductView } from "../../../types/designer";
 import type { ProductColor } from "../../../types/productColor";
 import type { TextStyle } from "../../../features/designer/models/textStyle";
@@ -12,6 +16,8 @@ interface SidebarProps {
   currentView: ProductView;
 
   productColor: ProductColor;
+
+  product: Product;
 
   onColorChange: (
     color: ProductColor
@@ -59,6 +65,8 @@ export default function Sidebar({
   currentView,
   productColor,
 
+  product,
+
   onViewChange,
   onColorChange,
 
@@ -80,20 +88,11 @@ export default function Sidebar({
 
   textStyle,
 }: SidebarProps) {
-  const views: ProductView[] = [
-    "front",
-    "back",
-    "left",
-    "right",
-  ];
+  const views =
+  product.supportedViews;
 
-  const colors: ProductColor[] = [
-    "white",
-    "black",
-    "navy",
-    "red",
-    "green",
-  ];
+  const colors =
+  product.colors;
 
   const [text, setText] =
     useState("");
@@ -139,7 +138,7 @@ export default function Sidebar({
       {/* TITLE */}
 
       <h1 className="mb-8 text-2xl font-bold">
-        T-Shirt Designer
+        {product.designerName ?? `${product.name} Designer`}
       </h1>
 
       {/* VIEWS */}
@@ -170,7 +169,8 @@ export default function Sidebar({
       <div className="mb-6">
 
         <h2 className="mb-3 text-lg font-semibold">
-          Shirt Color
+          {product.colorLabel ??
+            "Product Color"}
         </h2>
 
         <div className="grid grid-cols-2 gap-3">

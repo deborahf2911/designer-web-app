@@ -20,6 +20,11 @@ interface CartContextType {
     quantity: number
   ) => void;
 
+  updateItem: (
+    id: string,
+    item: CartItem
+  ) => void;
+
   clearCart: () => void;
 
   cartCount: number;
@@ -62,6 +67,20 @@ export function CartProvider({
       ...previous,
       item,
     ]);
+  }
+
+  function updateItem(
+    id: string,
+    updatedItem: CartItem
+  ) {
+    setItems((previous) =>
+      previous.map(
+        (item) =>
+          item.id === id
+            ? updatedItem
+            : item
+      )
+    );
   }
 
   function removeItem(id: string) {
@@ -116,6 +135,7 @@ export function CartProvider({
       value={{
         items,
         addItem,
+        updateItem,
         removeItem,
         updateQuantity,
         clearCart,
@@ -140,3 +160,4 @@ export function useCart() {
 
   return context;
 }
+

@@ -10,7 +10,9 @@ import {
   useState,
 } from "react";
 
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+} from "lucide-react";
 
 import Sidebar from "../../components/designer/Sidebar/Sidebar";
 import CanvasArea from "./CanvasArea";
@@ -20,305 +22,1352 @@ import {
   useDesign,
 } from "../../features/designer/context/DesignContext";
 
-import type { FabricDesignerHandle } from "../../features/designer/hooks/useFabricDesigner";
-import type { ProductColor } from "../../types/productColor";
-import type { TextStyle } from "../../features/designer/models/textStyle";
+import type {
+  FabricDesignerHandle,
+} from "../../features/designer/hooks/useFabricDesigner";
 
-import { useCart } from "../../contexts/CartContext";
-import { customizationPricing } from "../../data/customizationPricing";
+import type {
+  ProductColor,
+} from "../../types/productColor";
 
-import { products } from "../../data/products";
-import { productAssets } from "../../features/designer/config/productAssets";
+import type {
+  ProductView,
+} from "../../types/designer";
 
-// interface DesignerLocationState {
-//   color?: ProductColor;
-//   size?: string;
-// }
+import type {
+  TextStyle,
+} from "../../features/designer/models/textStyle";
+
+import {
+  useCart,
+} from "../../contexts/CartContext";
+
+import {
+  useAuth,
+} from "../../contexts/AuthContext";
+
+import {
+  customizationPricing,
+} from "../../data/customizationPricing";
+
+import {
+  products,
+} from "../../data/products";
+
+import {
+  productAssets,
+} from "../../features/designer/config/productAssets";
+
+import {
+  getSavedDesign,
+  saveDesign,
+  updateDesign,
+} from "../../services/designService";
+
+import {
+  getGuestDesign,
+  saveGuestDesign,
+  type GuestDesignRecord,
+} from "../../services/guestDesignService";
+
+// =========================================================
+// TYPES
+// =========================================================
+
+interface LoadedDesign {
+  color: ProductColor;
+
+  size: string;
+
+  quantity: number;
+
+  current_view: ProductView;
+
+  front_design: any[];
+
+  back_design: any[];
+
+  left_design: any[];
+
+  right_design: any[];
+}
+
+// =========================================================
+// DESIGNER
+// =========================================================
 
 function DesignerContent() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const { productId } = useParams();
+  const {
+    productId,
+  } =
+    useParams();
 
-  const [searchParams] = useSearchParams();
+  const [
+    searchParams,
+  ] =
+    useSearchParams();
 
-  const { addItem } = useCart();
+  const {
+    addItem,
+    updateItem,
+  } =
+    useCart();
+
+  const {
+    user,
+  } =
+    useAuth();
 
   const canvasRef =
-    useRef<FabricDesignerHandle | null>(null);
+    useRef<
+      FabricDesignerHandle | null
+    >(null);
 
-  const [textSelected, setTextSelected] =
-  useState(false);
+  // =========================================================
+  // URL
+  // =========================================================
 
-  const designPreview =
-  canvasRef.current?.getPreview() ?? undefined;
+  const designId =
+    searchParams.get(
+      "designId"
+    );
 
-  const [textStyle, setTextStyle] =
+  const isEditing =
+    Boolean(
+      designId
+    );
+
+  const isGuestDesign =
+    designId?.startsWith(
+      "guest-"
+    ) ??
+    false;
+
+  // =========================================================
+  // STATE
+  // =========================================================
+
+  const [
+    saving,
+    setSaving,
+  ] =
+    useState(
+      false
+    );
+
+  const [
+    loadingDesign,
+    setLoadingDesign,
+  ] =
+    useState(
+      Boolean(
+        designId
+      )
+    );
+
+  const [
+    saveError,
+    setSaveError,
+  ] =
+    useState(
+      ""
+    );
+
+  const [
+    loadError,
+    setLoadError,
+  ] =
+    useState(
+      ""
+    );
+
+  const [
+    textSelected,
+    setTextSelected,
+  ] =
+    useState(
+      false
+    );
+
+  const [
+    savedDesign,
+    setSavedDesign,
+  ] =
+    useState<
+      LoadedDesign | null
+    >(
+      null
+    );
+
+  const [
+    savedDesignLoadedIntoCanvas,
+    setSavedDesignLoadedIntoCanvas,
+  ] =
+    useState(
+      false
+    );
+
+  const [
+    quantity,
+    setQuantity,
+  ] =
+    useState(
+      1
+    );
+
+  const [
+    textStyle,
+    setTextStyle,
+  ] =
     useState<TextStyle>({
-      fill: "#000000",
-      fontFamily: "Arial",
-      fontWeight: "normal",
-      fontStyle: "normal",
-      underline: false,
-      fontSize: 40,
+      fill:
+        "#000000",
+
+      fontFamily:
+        "Arial",
+
+      fontWeight:
+        "normal",
+
+      fontStyle:
+        "normal",
+
+      underline:
+        false,
+
+      fontSize:
+        40,
     });
 
   const {
     design,
+
     setProduct,
     setColor,
     setCurrentView,
     setSize,
-  } = useDesign();
+  } =
+    useDesign();
 
-  const urlQuantity =
-  searchParams.get("quantity");
-
-  const quantity =
-    Math.max(
-      1,
-      Number(urlQuantity) || 1
-    );
-
-  // -----------------------------------------
-  // Find product
-  // -----------------------------------------
+  // =========================================================
+  // PRODUCT
+  // =========================================================
 
   const product =
     products.find(
-      (p) => p.id === Number(productId)
-    ) ?? products[0];
+      (
+        item
+      ) =>
+        item.id ===
+        Number(
+          productId
+        )
+    ) ??
+    products[0];
 
-  // -----------------------------------------
-  // Read state from Product page
-  // -----------------------------------------
+  // =========================================================
+  // URL VALUES
+  // =========================================================
 
   const urlColor =
-  searchParams.get("color");
+    searchParams.get(
+      "color"
+    );
 
   const urlSize =
-    searchParams.get("size");
+    searchParams.get(
+      "size"
+    );
 
-  const selectedColor: ProductColor =
+  const urlQuantity =
+    searchParams.get(
+      "quantity"
+    );
+
+  const selectedColor:
+    ProductColor =
     product.colors.includes(
-      urlColor as ProductColor
+      urlColor as
+        ProductColor
     )
-      ? (urlColor as ProductColor)
-      : product.colors[0];
+      ? (
+          urlColor as
+            ProductColor
+        )
+      : product.colors[
+          0
+        ];
 
+  /*
+   * Handles products such as the Cap where
+   * the old URL could contain size=undefined.
+   */
   const selectedSize =
+    urlSize &&
+    urlSize !==
+      "undefined" &&
     product.sizes.includes(
-      urlSize ?? ""
+      urlSize
     )
-      ? urlSize!
-      : product.sizes[0];
+      ? urlSize
+      : product.sizes[
+          0
+        ];
 
-  // -----------------------------------------
-  // Initialise designer
-  // -----------------------------------------
+  // =========================================================
+  // INITIALISE NEW DESIGN
+  // =========================================================
 
   useEffect(() => {
-    setProduct(product);
-    setColor(selectedColor);
-    setSize(selectedSize);
-  }, [
-    product,
-    selectedColor,
-    selectedSize
-  ]);
-
-  function handleSaveAndContinue() {
-    const summary =
-      canvasRef.current
-        ?.getCustomizationSummary();
-
-    if (!summary) {
+    if (
+      designId
+    ) {
       return;
     }
 
-    const textPrice =
-      summary.textCount *
-      customizationPricing.text;
+    setProduct(
+      product
+    );
 
-    const imagePrice =
-      summary.imageCount *
-      customizationPricing.image;
+    setColor(
+      selectedColor
+    );
 
-    const fontPrice =
-      summary.premiumFontUsed
-        ? customizationPricing.premiumFont
-        : 0;
+    setSize(
+      selectedSize
+    );
 
-    const customizationPrice =
-      textPrice +
-      imagePrice +
-      fontPrice;
+    setCurrentView(
+      "front"
+    );
 
-    const unitPrice =
-      product.price +
-      customizationPrice;
+    setQuantity(
+      Math.max(
+        1,
+        Number(
+          urlQuantity
+        ) ||
+          1
+      )
+    );
 
-    const selectedProductImage =
-    productAssets[product.type][design.color].front;
+    setSavedDesign(
+      null
+    );
 
-    addItem({
-      id: crypto.randomUUID(),
+    setSavedDesignLoadedIntoCanvas(
+      false
+    );
+  }, [
+    designId,
+    product,
+    selectedColor,
+    selectedSize,
+    urlQuantity,
+  ]);
 
-      productId: product.id,
-      productName: product.name,
-      productImage: selectedProductImage,
+  // =========================================================
+  // LOAD EXISTING DESIGN
+  //
+  // guest-* → IndexedDB
+  // normal UUID → Supabase
+  // =========================================================
 
-      designPreview,
+  useEffect(() => {
+    if (
+      !designId
+    ) {
+      return;
+    }
 
-      color: design.color,
-      size: design.size,
-      quantity,
+    const currentDesignId =
+      designId;
 
-      basePrice: product.price,
+    let cancelled =
+      false;
 
-      customized: true,
+    async function load() {
+      setLoadingDesign(
+        true
+      );
 
-      customization: summary,
+      setLoadError(
+        ""
+      );
 
-      customizationPrice,
+      setSavedDesignLoadedIntoCanvas(
+        false
+      );
 
-      unitPrice,
-    });
+      try {
+        // ===================================================
+        // GUEST
+        // ===================================================
 
-    navigate("/cart");
+        if (
+          currentDesignId.startsWith(
+            "guest-"
+          )
+        ) {
+          const guest =
+            await getGuestDesign(
+              currentDesignId
+            );
+
+          if (
+            !guest
+          ) {
+            throw new Error(
+              "This guest design is no longer available."
+            );
+          }
+
+          const normalized:
+            LoadedDesign = {
+              color:
+                guest.color,
+
+              size:
+                guest.size,
+
+              quantity:
+                guest.quantity,
+
+              current_view:
+                guest.currentView,
+
+              front_design:
+                guest.designData.front,
+
+              back_design:
+                guest.designData.back,
+
+              left_design:
+                guest.designData.left,
+
+              right_design:
+                guest.designData.right,
+            };
+
+          if (
+            cancelled
+          ) {
+            return;
+          }
+
+          setSavedDesign(
+            normalized
+          );
+
+          setProduct(
+            product
+          );
+
+          setColor(
+            normalized.color
+          );
+
+          setSize(
+            normalized.size
+          );
+
+          setQuantity(
+            Math.max(
+              1,
+              normalized.quantity
+            )
+          );
+
+          setCurrentView(
+            normalized.current_view
+          );
+
+          return;
+        }
+
+        // ===================================================
+        // SIGNED-IN SAVED DESIGN
+        // ===================================================
+
+        const data =
+          await getSavedDesign(
+            currentDesignId
+          );
+
+        if (
+          cancelled
+        ) {
+          return;
+        }
+
+        const normalized:
+          LoadedDesign = {
+            color:
+              data.color,
+
+            size:
+              data.size,
+
+            quantity:
+              data.quantity,
+
+            current_view:
+              data.current_view ??
+              "front",
+
+            front_design:
+              data.front_design ??
+              [],
+
+            back_design:
+              data.back_design ??
+              [],
+
+            left_design:
+              data.left_design ??
+              [],
+
+            right_design:
+              data.right_design ??
+              [],
+          };
+
+        setSavedDesign(
+          normalized
+        );
+
+        setProduct(
+          product
+        );
+
+        setColor(
+          normalized.color
+        );
+
+        setSize(
+          normalized.size
+        );
+
+        setQuantity(
+          Math.max(
+            1,
+            normalized.quantity
+          )
+        );
+
+        setCurrentView(
+          normalized.current_view
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to load saved design:",
+          error
+        );
+
+        if (
+          !cancelled
+        ) {
+          setLoadError(
+            error instanceof
+              Error
+              ? error.message
+              : "Unable to load this design."
+          );
+        }
+      } finally {
+        if (
+          !cancelled
+        ) {
+          setLoadingDesign(
+            false
+          );
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled =
+        true;
+    };
+  }, [
+    designId,
+    product,
+  ]);
+
+  // =========================================================
+  // LOAD FABRIC DATA
+  // =========================================================
+
+  useEffect(() => {
+    if (
+      !savedDesign ||
+      savedDesignLoadedIntoCanvas
+    ) {
+      return;
+    }
+
+    if (
+      design.color !==
+        savedDesign.color ||
+      design.size !==
+        savedDesign.size ||
+      design.currentView !==
+        savedDesign.current_view
+    ) {
+      return;
+    }
+
+    const designer =
+      canvasRef.current;
+
+    if (
+      !designer
+    ) {
+      return;
+    }
+
+    const designData = {
+      front:
+        savedDesign.front_design,
+
+      back:
+        savedDesign.back_design,
+
+      left:
+        savedDesign.left_design,
+
+      right:
+        savedDesign.right_design,
+    };
+
+    void designer
+      .loadDesignData(
+        designData as any,
+        savedDesign.current_view
+      )
+      .then(
+        () => {
+          setSavedDesignLoadedIntoCanvas(
+            true
+          );
+        }
+      )
+      .catch(
+        (
+          error
+        ) => {
+          console.error(
+            "Unable to restore canvas:",
+            error
+          );
+
+          setLoadError(
+            "Unable to restore this saved design."
+          );
+        }
+      );
+  }, [
+    savedDesign,
+    savedDesignLoadedIntoCanvas,
+    design.color,
+    design.size,
+    design.currentView,
+  ]);
+
+  // =========================================================
+  // SAVE / UPDATE
+  // =========================================================
+
+  async function handleSaveAndContinue() {
+    if (
+      saving
+    ) {
+      return;
+    }
+
+    setSaveError(
+      ""
+    );
+
+    const designer =
+      canvasRef.current;
+
+    if (
+      !designer
+    ) {
+      setSaveError(
+        "The designer is not ready yet."
+      );
+
+      return;
+    }
+
+    setSaving(
+      true
+    );
+
+    try {
+      // =====================================================
+      // WAIT FOR AUTHENTICATED UPLOADS
+      // =====================================================
+
+      await designer
+        .waitForPendingUploads();
+
+      // =====================================================
+      // DESIGN DATA
+      // =====================================================
+
+      const designData =
+        designer
+          .getDesignData();
+
+      // =====================================================
+      // PREVIEWS
+      //
+      // These are individual customized-side previews.
+      // Example:
+      // {
+      //   front: "...",
+      //   back: "..."
+      // }
+      // =====================================================
+
+      const previews =
+        await designer
+          .getAllPreviews();
+
+      const designPreview =
+        previews.front ??
+        previews[
+          design.currentView
+        ] ??
+        Object.values(
+          previews
+        )[0] ??
+        designer.getPreview();
+
+      if (
+        !designPreview
+      ) {
+        throw new Error(
+          "Unable to generate a design preview."
+        );
+      }
+
+      // =====================================================
+      // CUSTOMIZATION SUMMARY
+      // =====================================================
+
+      const summary =
+        designer
+          .getCustomizationSummary();
+
+      // =====================================================
+      // PRICING
+      // =====================================================
+
+      const textPrice =
+        summary.textCount *
+        customizationPricing.text;
+
+      const imagePrice =
+        summary.imageCount *
+        customizationPricing.image;
+
+      const fontPrice =
+        summary.premiumFontUsed
+          ? customizationPricing
+              .premiumFont
+          : 0;
+
+      const customizationPrice =
+        textPrice +
+        imagePrice +
+        fontPrice;
+
+      const unitPrice =
+        product.price +
+        customizationPrice;
+
+      // =====================================================
+      // ID
+      // =====================================================
+
+      const finalDesignId:
+        string =
+        designId
+          ? designId
+          : user
+            ? crypto.randomUUID()
+            : `guest-${crypto.randomUUID()}`;
+
+      // =====================================================
+      // PERSIST
+      // =====================================================
+
+      if (
+        user &&
+        !isGuestDesign
+      ) {
+        // ===================================================
+        // SIGNED-IN USER → SUPABASE
+        // ===================================================
+
+        if (
+          isEditing
+        ) {
+          await updateDesign({
+            id:
+              finalDesignId,
+
+            userId:
+              user.id,
+
+            productId:
+              product.id,
+
+            productName:
+              product.name,
+
+            color:
+              design.color,
+
+            size:
+              design.size,
+
+            quantity,
+
+            currentView:
+              design.currentView,
+
+            designData,
+
+            previews,
+
+            customizationPrice,
+          });
+        } else {
+          await saveDesign({
+            id:
+              finalDesignId,
+
+            userId:
+              user.id,
+
+            productId:
+              product.id,
+
+            productName:
+              product.name,
+
+            color:
+              design.color,
+
+            size:
+              design.size,
+
+            quantity,
+
+            currentView:
+              design.currentView,
+
+            designData,
+
+            previews,
+
+            customizationPrice,
+          });
+        }
+      } else {
+        // ===================================================
+        // GUEST → INDEXEDDB
+        // ===================================================
+
+        const guestRecord:
+          GuestDesignRecord = {
+            id:
+              finalDesignId,
+
+            productId:
+              product.id,
+
+            productName:
+              product.name,
+
+            color:
+              design.color,
+
+            size:
+              design.size,
+
+            quantity,
+
+            currentView:
+              design.currentView,
+
+            designData: {
+              front:
+                designData.front,
+
+              back:
+                designData.back,
+
+              left:
+                designData.left,
+
+              right:
+                designData.right,
+            },
+
+            customizationPrice,
+
+            updatedAt:
+              new Date()
+                .toISOString(),
+          };
+
+        await saveGuestDesign(
+          guestRecord
+        );
+      }
+
+      // =====================================================
+      // PRODUCT IMAGE
+      // =====================================================
+
+      const selectedProductImage =
+        productAssets[
+          product.type
+        ]?.[
+          design.color
+        ]?.front ??
+        product.image;
+
+      // =====================================================
+      // CART ITEM
+      //
+      // Store both:
+      //
+      // designPreview  = one thumbnail for Cart / Checkout
+      // designPreviews = all customized-side previews
+      // =====================================================
+
+      const cartItem = {
+        id:
+          finalDesignId,
+
+        productId:
+          product.id,
+
+        productName:
+          product.name,
+
+        productImage:
+          selectedProductImage,
+
+        designPreview,
+
+        designPreviews:
+          previews,
+
+        color:
+          design.color,
+
+        size:
+          design.size,
+
+        quantity,
+
+        basePrice:
+          product.price,
+
+        customized:
+          true,
+
+        customization:
+          summary,
+
+        customizationPrice,
+
+        unitPrice,
+      };
+
+      // =====================================================
+      // CART
+      // =====================================================
+
+      if (
+        isEditing
+      ) {
+        updateItem(
+          finalDesignId,
+          cartItem
+        );
+      } else {
+        addItem(
+          cartItem
+        );
+      }
+
+      navigate(
+        "/cart"
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Failed to save design:",
+        error
+      );
+
+      setSaveError(
+        error instanceof
+          Error
+          ? error.message
+          : "Unable to save your design. Please try again."
+      );
+    } finally {
+      setSaving(
+        false
+      );
+    }
   }
 
-  // -----------------------------------------
-  // Render
-  // -----------------------------------------
+  // =========================================================
+  // LOADING
+  // =========================================================
 
-  return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-gray-100">
+  if (
+    loadingDesign
+  ) {
+    return (
+      <div className="flex h-full items-center justify-center bg-gray-100">
 
-      {/* =====================================
-          LEFT SIDEBAR
-      ===================================== */}
+        <div className="text-center">
 
-      <Sidebar
-        currentView={design.currentView}
-        productColor={design.color}
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600" />
 
-        textSelected={textSelected}
+          <p className="mt-4 text-sm text-gray-600">
+            Loading your design...
+          </p>
 
-        textStyle={textStyle}
+        </div>
 
-        onColorChange={setColor}
-        onViewChange={setCurrentView}
+      </div>
+    );
+  }
 
-        onImageUpload={(file) => {
-          void canvasRef.current?.addImage(file);
-        }}
+  // =========================================================
+  // ERROR
+  // =========================================================
 
-        onDeleteSelected={() => {
-          canvasRef.current?.deleteSelected();
-        }}
+  if (
+    loadError
+  ) {
+    return (
+      <div className="flex h-full items-center justify-center bg-gray-100 px-6">
 
-        onTextAdd={(text) => {
-          canvasRef.current?.addText(text);
-        }}
+        <div className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center">
 
-        onTextColorChange={(color) => {
-          canvasRef.current?.updateSelectedTextColor(color);
-
-          setTextStyle((previous) => ({
-            ...previous,
-            fill: color,
-          }));
-        }}
-
-        onFontChange={(font) => {
-          canvasRef.current?.updateSelectedFont(font);
-
-          setTextStyle((previous) => ({
-            ...previous,
-            fontFamily: font,
-          }));
-        }}
-
-        onBold={() => {
-          canvasRef.current?.toggleBold();
-
-          setTextStyle((previous) => ({
-            ...previous,
-            fontWeight:
-              previous.fontWeight === "bold"
-                ? "normal"
-                : "bold",
-          }));
-        }}
-
-        onItalic={() => {
-          canvasRef.current?.toggleItalic();
-
-          setTextStyle((previous) => ({
-            ...previous,
-            fontStyle:
-              previous.fontStyle === "italic"
-                ? "normal"
-                : "italic",
-          }));
-        }}
-
-        onUnderline={() => {
-          canvasRef.current?.toggleUnderline();
-
-          setTextStyle((previous) => ({
-            ...previous,
-            underline: !previous.underline,
-          }));
-        }}
-
-        onFontSizeChange={(amount) => {
-          canvasRef.current?.changeFontSize(amount);
-
-          setTextStyle((previous) => ({
-            ...previous,
-            fontSize: Math.max(
-              8,
-              Math.min(
-                150,
-                previous.fontSize + amount
-              )
-            ),
-          }));
-        }}
-      />
-
-      {/* =====================================
-          RIGHT SIDE
-      ===================================== */}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-
-        {/* PRODUCT HEADER */}
-
-        <div className="shrink-0 border-b bg-white px-8 py-4">
+          <p className="text-red-600">
+            {loadError}
+          </p>
 
           <button
             type="button"
             onClick={() =>
               navigate(
-                `/product/${design.product.id}`
+                "/cart"
               )
             }
+            className="mt-5 rounded-lg bg-black px-6 py-3 text-white"
+          >
+            Back to Cart
+          </button>
+
+        </div>
+
+      </div>
+    );
+  }
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
+  return (
+    <div className="flex h-full min-h-0 overflow-hidden bg-gray-100">
+
+      {/* ===================================================
+          SIDEBAR
+      =================================================== */}
+
+      <Sidebar
+        product={
+          design.product
+        }
+
+        currentView={
+          design.currentView
+        }
+
+        productColor={
+          design.color
+        }
+
+        textSelected={
+          textSelected
+        }
+
+        textStyle={
+          textStyle
+        }
+
+        onColorChange={
+          setColor
+        }
+
+        onViewChange={
+          setCurrentView
+        }
+
+        onImageUpload={(
+          file
+        ) => {
+          setSaveError(
+            ""
+          );
+
+          void canvasRef
+            .current
+            ?.addImage(
+              file,
+              user?.id
+            )
+            .catch(
+              (
+                error
+              ) => {
+                console.error(
+                  "Image upload failed:",
+                  error
+                );
+
+                setSaveError(
+                  error instanceof
+                    Error
+                    ? error.message
+                    : "Unable to upload this image."
+                );
+              }
+            );
+        }}
+
+        onDeleteSelected={() => {
+          canvasRef
+            .current
+            ?.deleteSelected();
+        }}
+
+        onTextAdd={(
+          text
+        ) => {
+          canvasRef
+            .current
+            ?.addText(
+              text
+            );
+        }}
+
+        onTextColorChange={(
+          color
+        ) => {
+          canvasRef
+            .current
+            ?.updateSelectedTextColor(
+              color
+            );
+
+          setTextStyle(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              fill:
+                color,
+            })
+          );
+        }}
+
+        onFontChange={(
+          font
+        ) => {
+          void canvasRef
+            .current
+            ?.updateSelectedFont(
+              font
+            );
+
+          setTextStyle(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              fontFamily:
+                font,
+            })
+          );
+        }}
+
+        onBold={() => {
+          canvasRef
+            .current
+            ?.toggleBold();
+
+          setTextStyle(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              fontWeight:
+                previous.fontWeight ===
+                "bold"
+                  ? "normal"
+                  : "bold",
+            })
+          );
+        }}
+
+        onItalic={() => {
+          canvasRef
+            .current
+            ?.toggleItalic();
+
+          setTextStyle(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              fontStyle:
+                previous.fontStyle ===
+                "italic"
+                  ? "normal"
+                  : "italic",
+            })
+          );
+        }}
+
+        onUnderline={() => {
+          canvasRef
+            .current
+            ?.toggleUnderline();
+
+          setTextStyle(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              underline:
+                !previous
+                  .underline,
+            })
+          );
+        }}
+
+        onFontSizeChange={(
+          amount
+        ) => {
+          canvasRef
+            .current
+            ?.changeFontSize(
+              amount
+            );
+
+          setTextStyle(
+            (
+              previous
+            ) => ({
+              ...previous,
+
+              fontSize:
+                Math.max(
+                  8,
+                  Math.min(
+                    150,
+                    previous.fontSize +
+                      amount
+                  )
+                ),
+            })
+          );
+        }}
+      />
+
+      {/* ===================================================
+          RIGHT
+      =================================================== */}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+
+        {/* HEADER */}
+
+        <div className="shrink-0 border-b bg-white px-8 py-4">
+
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                isEditing
+              ) {
+                navigate(
+                  "/cart"
+                );
+              } else {
+                navigate(
+                  `/product/${design.product.id}`
+                );
+              }
+            }}
             className="mb-3 flex items-center gap-2 text-sm text-gray-600 transition hover:text-black"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft
+              size={
+                18
+              }
+            />
 
-            Back to Product
+            {isEditing
+              ? "Back to Cart"
+              : "Back to Product"}
           </button>
 
           <h1 className="text-2xl font-bold">
-            {design.product.name}
+            {
+              design.product
+                .name
+            }
           </h1>
 
           <p className="text-gray-500">
-            {design.color.toUpperCase()} • Size{" "}
+            {design.color.toUpperCase()}
+
+            {" • "}
+
+            Size{" "}
+
             {design.size}
           </p>
 
@@ -328,25 +1377,67 @@ function DesignerContent() {
 
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gray-200 p-4">
 
-          <CanvasArea
-            product={design.product}
-            currentView={design.currentView}
-            productColor={design.color}
-            ref={canvasRef}
-            onSelectionChange={(isSelected) => {
-              setTextSelected(isSelected);
+          {design.product.id ===
+          product.id ? (
 
-              if (isSelected) {
-                const style =
-                  canvasRef.current?.getSelectedTextStyle();
-
-                if (style) {
-                  setTextStyle(style);
-                }
+            <CanvasArea
+              key={
+                design.product.id
               }
-            }}
-            onTextStyleChange={setTextStyle}
-          />
+
+              product={
+                design.product
+              }
+
+              currentView={
+                design.currentView
+              }
+
+              productColor={
+                design.color
+              }
+
+              ref={
+                canvasRef
+              }
+
+              onSelectionChange={(
+                isSelected
+              ) => {
+                setTextSelected(
+                  isSelected
+                );
+
+                if (
+                  isSelected
+                ) {
+                  const style =
+                    canvasRef
+                      .current
+                      ?.getSelectedTextStyle();
+
+                  if (
+                    style
+                  ) {
+                    setTextStyle(
+                      style
+                    );
+                  }
+                }
+              }}
+
+              onTextStyleChange={
+                setTextStyle
+              }
+            />
+
+          ) : (
+
+            <div className="text-sm text-gray-500">
+              Preparing designer...
+            </div>
+
+          )}
 
         </div>
 
@@ -354,12 +1445,29 @@ function DesignerContent() {
 
         <div className="shrink-0 border-t bg-white p-4">
 
+          {saveError && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {saveError}
+            </div>
+          )}
+
           <button
             type="button"
-            onClick={handleSaveAndContinue}
-            className="w-full rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700"
+            onClick={() =>
+              void handleSaveAndContinue()
+            }
+            disabled={
+              saving
+            }
+            className="w-full rounded-lg bg-green-600 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Design & Continue
+            {saving
+              ? isEditing
+                ? "Updating Design..."
+                : "Saving Design..."
+              : isEditing
+                ? "Update Design & Continue"
+                : "Save Design & Continue"}
           </button>
 
         </div>
@@ -369,6 +1477,10 @@ function DesignerContent() {
     </div>
   );
 }
+
+// =========================================================
+// PAGE
+// =========================================================
 
 export default function Designer() {
   return (
