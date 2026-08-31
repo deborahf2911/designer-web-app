@@ -28,7 +28,9 @@ import {
 } from "../../contexts/RegionContext";
 
 import {
+  countryOptions,
   getCountryByCode,
+  type CountryCode,
 } from "../../data/countries";
 
 import {
@@ -41,6 +43,7 @@ import type {
 
 import {
   getDeliveryFee,
+  getInternationalDeliveryFee,
   type DeliveryZone,
 } from "../../data/deliveryPricing";
 
@@ -48,12 +51,6 @@ import {
   sendOrderConfirmationEmail,
 } from "../../services/orderEmailService";
 
-// =========================================================
-// TEMPORARY INTERNATIONAL DELIVERY
-// =========================================================
-
-const INTERNATIONAL_DELIVERY_FEE =
-  6000;
 
 export default function Checkout() {
   const navigate =
@@ -74,6 +71,7 @@ export default function Checkout() {
   const {
     country,
     currency,
+    setCountry,
     formatPrice,
   } =
     useRegion();
@@ -120,15 +118,42 @@ export default function Checkout() {
     );
 
   const isSriLanka =
-    country ===
-    "LK";
+    country === "LK";
+
+  // =========================================================
+  // INTERNATIONAL SHIPPING
+  // =========================================================
+
+  const internationalDeliveryFee =
+    !isSriLanka
+      ? getInternationalDeliveryFee(
+          country
+        )
+      : null;
+
+  const hasInternationalRate =
+    internationalDeliveryFee !==
+    null;
+
+  // =========================================================
+  // CHECKOUT AVAILABILITY
+  // =========================================================
+
+  const canPlaceOrder =
+    isSriLanka ||
+    hasInternationalRate;
+
+  // =========================================================
+  // DELIVERY FEE
+  // =========================================================
 
   const deliveryFee =
     isSriLanka
       ? getDeliveryFee(
           deliveryZone
         )
-      : INTERNATIONAL_DELIVERY_FEE;
+      : internationalDeliveryFee ??
+        0;
 
   const total =
     subtotal +
@@ -329,6 +354,16 @@ export default function Checkout() {
     event.preventDefault();
 
     if (
+      !canPlaceOrder
+    ) {
+      setError(
+        `Delivery to ${countryName} requires a shipping quote. Please contact Kingdom Threads before placing your order.`
+      );
+
+      return;
+    }
+
+    if (
       submitting
     ) {
       return;
@@ -370,18 +405,29 @@ export default function Checkout() {
           deliveryFee,
         });
 
-        try {
-          await sendOrderConfirmationEmail({
-            customerName: customer.name,
-            customerEmail: customer.email,
-            orderNumber: order.orderNumber,
-          });
-        } catch (emailError) {
-          console.error(
-            "Order created, but confirmation email failed:",
-            emailError
-          );
-        }
+      // =====================================================
+      // SEND CONFIRMATION EMAIL
+      // =====================================================
+
+      try {
+        await sendOrderConfirmationEmail({
+          customerName:
+            customer.name,
+
+          customerEmail:
+            customer.email,
+
+          orderNumber:
+            order.orderNumber,
+        });
+      } catch (
+        emailError
+      ) {
+        console.error(
+          "Order created, but confirmation email failed:",
+          emailError
+        );
+      }
 
       clearCart();
 
@@ -494,36 +540,74 @@ export default function Checkout() {
 
             <div className="grid gap-5 sm:grid-cols-2">
 
-              {/* COUNTRY */}
+              {/* =====================================
+                  COUNTRY
+              ===================================== */}
 
-              <div className="sm:col-span-2">
+              <label className="sm:col-span-2">
 
                 <span className="mb-2 block text-sm font-medium">
                   Country *
                 </span>
 
-                <div className="flex items-center gap-3 rounded-xl border bg-gray-50 px-4 py-3">
+                <div className="relative">
 
                   <Globe2
                     size={18}
-                    className="text-gray-500"
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
                   />
 
-                  <span className="font-medium">
-                    {countryName}
-                  </span>
+                  <select
+                    value={
+                      country
+                    }
+                    onChange={(
+                      event
+                    ) => {
+                      setCountry(
+                        event.target
+                          .value as CountryCode
+                      );
 
-                  <span className="ml-auto text-xs font-semibold text-blue-600">
+                      setError(
+                        ""
+                      );
+                    }}
+                    autoComplete="country"
+                    className="w-full appearance-none rounded-xl border bg-white py-3 pl-11 pr-20 outline-none transition focus:border-black"
+                  >
+
+                    {countryOptions.map(
+                      (
+                        option
+                      ) => (
+                        <option
+                          key={
+                            option.code
+                          }
+                          value={
+                            option.code
+                          }
+                        >
+                          {option.flag}{" "}
+                          {option.name}
+                        </option>
+                      )
+                    )}
+
+                  </select>
+
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-600">
                     {currency}
                   </span>
 
                 </div>
 
                 <p className="mt-2 text-xs text-gray-500">
-                  Change your country from the selector in the navigation bar.
+                  Select the country where this order will be delivered.
                 </p>
 
-              </div>
+              </label>
 
               {/* FULL NAME */}
 
@@ -772,23 +856,49 @@ export default function Checkout() {
               ===================================== */}
 
               {!isSriLanka && (
-                <div className="sm:col-span-2 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                <div
+                  className={
+                    hasInternationalRate
+                      ? "sm:col-span-2 rounded-xl border border-blue-200 bg-blue-50 p-4"
+                      : "sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-4"
+                  }
+                >
 
-                  <p className="font-semibold text-blue-900">
-                    International Delivery
+                  <p
+                    className={
+                      hasInternationalRate
+                        ? "font-semibold text-blue-900"
+                        : "font-semibold text-amber-900"
+                    }
+                  >
+                    International Shipping
                   </p>
 
-                  <p className="mt-1 text-sm leading-6 text-blue-700">
-                    Shipping to{" "}
-                    {countryName}{" "}
-                    is currently estimated at{" "}
-                    <strong>
-                      {formatPrice(
-                        INTERNATIONAL_DELIVERY_FEE
-                      )}
-                    </strong>
-                    {" "}for this demo.
-                  </p>
+                  {hasInternationalRate ? (
+                    <p className="mt-1 text-sm leading-6 text-blue-800">
+                      Delivery to{" "}
+                      <strong>
+                        {countryName}
+                      </strong>{" "}
+                      is available for{" "}
+                      <strong>
+                        {formatPrice(
+                          deliveryFee
+                        )}
+                      </strong>
+                      .
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm leading-6 text-amber-800">
+                      Delivery to{" "}
+                      <strong>
+                        {countryName}
+                      </strong>{" "}
+                      requires a shipping quote.
+                      Please contact Kingdom Threads
+                      before placing your order.
+                    </p>
+                  )}
 
                 </div>
               )}
@@ -893,6 +1003,8 @@ export default function Checkout() {
 
           <div className="mt-6 border-t pt-6">
 
+            {/* SUBTOTAL */}
+
             <div className="flex justify-between">
 
               <span className="text-gray-600">
@@ -907,6 +1019,8 @@ export default function Checkout() {
 
             </div>
 
+            {/* DELIVERY */}
+
             <div className="mt-3 flex justify-between gap-4">
 
               <span className="text-gray-600">
@@ -916,17 +1030,23 @@ export default function Checkout() {
               </span>
 
               <span className="text-right">
-                {formatPrice(
-                  deliveryFee
-                )}
+                {canPlaceOrder
+                  ? formatPrice(
+                      deliveryFee
+                    )
+                  : "Quote required"}
               </span>
 
             </div>
 
+            {/* TOTAL / SUBTOTAL */}
+
             <div className="mt-5 flex items-center justify-between border-t pt-5">
 
               <span className="text-xl font-bold">
-                Total
+                {canPlaceOrder
+                  ? "Total"
+                  : "Subtotal"}
               </span>
 
               <span className="text-2xl font-black">
@@ -937,15 +1057,21 @@ export default function Checkout() {
 
             </div>
 
+            {/* DELIVERY INFORMATION */}
+
             <p className="mt-3 text-xs leading-5 text-gray-500">
 
               {isSriLanka
                 ? "Delivery charges are calculated based on your selected delivery area."
-                : `International delivery to ${countryName} is using an estimated demo rate.`}
+                : hasInternationalRate
+                  ? `International delivery to ${countryName} is included in the total shown above.`
+                  : `International shipping to ${countryName} requires a separate delivery quote.`}
 
             </p>
 
           </div>
+
+          {/* ERROR */}
 
           {error && (
             <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -953,16 +1079,21 @@ export default function Checkout() {
             </div>
           )}
 
+          {/* PLACE ORDER */}
+
           <button
             type="submit"
             disabled={
-              submitting
+              submitting ||
+              !canPlaceOrder
             }
-            className="mt-6 w-full rounded-xl bg-black py-4 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-xl bg-black py-4 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting
               ? "Placing Order..."
-              : "Place Order"}
+              : canPlaceOrder
+                ? "Place Order"
+                : "International Shipping Quote Required"}
           </button>
 
           <p className="mt-3 text-center text-xs text-gray-500">
