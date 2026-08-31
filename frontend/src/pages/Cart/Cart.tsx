@@ -16,6 +16,10 @@ import {
   customizationPricing,
 } from "../../data/customizationPricing";
 
+import {
+  useRegion,
+} from "../../contexts/RegionContext";
+
 export default function Cart() {
   const {
     items,
@@ -27,6 +31,11 @@ export default function Cart() {
 
   const navigate =
     useNavigate();
+
+  const {
+    formatPrice,
+  } =
+    useRegion();
 
   // =========================================================
   // EMPTY CART
@@ -194,8 +203,9 @@ export default function Cart() {
                           </span>
 
                           <span>
-                            Rs.{" "}
-                            {item.basePrice.toLocaleString()}
+                            {formatPrice(
+                              item.basePrice
+                            )}
                           </span>
 
                         </div>
@@ -210,11 +220,10 @@ export default function Cart() {
                             </span>
 
                             <span>
-                              Rs.{" "}
-                              {(
+                              {formatPrice(
                                 item.customization.textCount *
-                                customizationPricing.text
-                              ).toLocaleString()}
+                                  customizationPricing.text
+                              )}
                             </span>
 
                           </div>
@@ -230,11 +239,10 @@ export default function Cart() {
                             </span>
 
                             <span>
-                              Rs.{" "}
-                              {(
+                              {formatPrice(
                                 item.customization.imageCount *
-                                customizationPricing.image
-                              ).toLocaleString()}
+                                  customizationPricing.image
+                              )}
                             </span>
 
                           </div>
@@ -248,8 +256,9 @@ export default function Cart() {
                             </span>
 
                             <span>
-                              Rs.{" "}
-                              {customizationPricing.premiumFont.toLocaleString()}
+                              {formatPrice(
+                                customizationPricing.premiumFont
+                              )}
                             </span>
 
                           </div>
@@ -262,8 +271,9 @@ export default function Cart() {
                           </span>
 
                           <span>
-                            Rs.{" "}
-                            {item.unitPrice.toLocaleString()}
+                            {formatPrice(
+                              item.unitPrice
+                            )}
                           </span>
 
                         </div>
@@ -318,11 +328,10 @@ export default function Cart() {
                       </div>
 
                       <p className="text-xl font-bold">
-                        Rs.{" "}
-                        {(
+                        {formatPrice(
                           item.unitPrice *
-                          item.quantity
-                        ).toLocaleString()}
+                            item.quantity
+                        )}
                       </p>
 
                     </div>
@@ -353,19 +362,20 @@ export default function Cart() {
             </span>
 
             <span className="font-semibold">
-              Rs.{" "}
-              {subtotal.toLocaleString()}
+              {formatPrice(
+                subtotal
+              )}
             </span>
 
           </div>
 
-          <div className="mt-4 flex justify-between">
+          <div className="mt-4 flex justify-between gap-4">
 
             <span className="text-gray-600">
               Delivery
             </span>
 
-            <span>
+            <span className="text-right">
               Calculated at checkout
             </span>
 
@@ -380,8 +390,9 @@ export default function Cart() {
               </span>
 
               <span className="text-2xl font-black">
-                Rs.{" "}
-                {subtotal.toLocaleString()}
+                {formatPrice(
+                  subtotal
+                )}
               </span>
 
             </div>

@@ -10,9 +10,18 @@ import {
   shopProducts,
 } from "../../data/shopProducts";
 
+import {
+  useRegion,
+} from "../../contexts/RegionContext";
+
 export default function FeaturedProducts() {
   const featuredProducts =
     shopProducts.slice(0, 4);
+
+  const {
+    formatPrice,
+  } =
+    useRegion();
 
   return (
     <section className="bg-slate-50 py-20">
@@ -147,8 +156,9 @@ export default function FeaturedProducts() {
                     <div className="mt-5 flex items-center justify-between gap-4">
 
                       <span className="text-2xl font-black">
-                        Rs.{" "}
-                        {product.price.toLocaleString()}
+                        {formatPrice(
+                          product.price
+                        )}
                       </span>
 
                       <Link

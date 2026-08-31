@@ -32,6 +32,8 @@ import Checkout from "../pages/Checkout/Checkout";
 
 import OrderConfirmation from "../pages/OrderConfirmation/OrderConfirmation";
 
+import CustomizeCategory from "../pages/CustomizeCategory/CustomizeCategory";
+
 export default function AppRoutes() {
   return (
     <BrowserRouter>
@@ -74,6 +76,11 @@ export default function AppRoutes() {
             element={
               <Customize />
             }
+          />
+
+          <Route
+            path="/customize/:category"
+            element={<CustomizeCategory />}
           />
 
           <Route

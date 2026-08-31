@@ -6,6 +6,7 @@ import {
 
 import {
   ArrowLeft,
+  Globe2,
   MapPin,
   PackageCheck,
 } from "lucide-react";
@@ -23,6 +24,14 @@ import {
 } from "../../contexts/AuthContext";
 
 import {
+  useRegion,
+} from "../../contexts/RegionContext";
+
+import {
+  getCountryByCode,
+} from "../../data/countries";
+
+import {
   createOrder,
 } from "../../services/orderService";
 
@@ -34,6 +43,17 @@ import {
   getDeliveryFee,
   type DeliveryZone,
 } from "../../data/deliveryPricing";
+
+import {
+  sendOrderConfirmationEmail,
+} from "../../services/orderEmailService";
+
+// =========================================================
+// TEMPORARY INTERNATIONAL DELIVERY
+// =========================================================
+
+const INTERNATIONAL_DELIVERY_FEE =
+  6000;
 
 export default function Checkout() {
   const navigate =
@@ -51,6 +71,26 @@ export default function Checkout() {
   } =
     useAuth();
 
+  const {
+    country,
+    currency,
+    formatPrice,
+  } =
+    useRegion();
+
+  // =========================================================
+  // SELECTED COUNTRY
+  // =========================================================
+
+  const selectedCountry =
+    getCountryByCode(
+      country
+    );
+
+  const countryName =
+    selectedCountry?.name ??
+    country;
+
   const [
     submitting,
     setSubmitting,
@@ -67,27 +107,36 @@ export default function Checkout() {
       ""
     );
 
-  /*
-   * No online payment currently.
-   *
-   * Set to 0 until delivery calculation
-   * rules are implemented.
-   */
-  const [
-  deliveryZone,
-  setDeliveryZone,
-] = useState<DeliveryZone>(
-  "colombo"
-);
+  // =========================================================
+  // DELIVERY
+  // =========================================================
 
-    const deliveryFee =
-    getDeliveryFee(
-        deliveryZone
+  const [
+    deliveryZone,
+    setDeliveryZone,
+  ] =
+    useState<DeliveryZone>(
+      "colombo"
     );
 
-    const total =
+  const isSriLanka =
+    country ===
+    "LK";
+
+  const deliveryFee =
+    isSriLanka
+      ? getDeliveryFee(
+          deliveryZone
+        )
+      : INTERNATIONAL_DELIVERY_FEE;
+
+  const total =
     subtotal +
     deliveryFee;
+
+  // =========================================================
+  // CUSTOMER
+  // =========================================================
 
   const [
     customer,
@@ -165,7 +214,7 @@ export default function Checkout() {
 
   if (
     items.length ===
-    0 &&
+      0 &&
     !submitting
   ) {
     return (
@@ -321,6 +370,19 @@ export default function Checkout() {
           deliveryFee,
         });
 
+        try {
+          await sendOrderConfirmationEmail({
+            customerName: customer.name,
+            customerEmail: customer.email,
+            orderNumber: order.orderNumber,
+          });
+        } catch (emailError) {
+          console.error(
+            "Order created, but confirmation email failed:",
+            emailError
+          );
+        }
+
       clearCart();
 
       navigate(
@@ -432,6 +494,39 @@ export default function Checkout() {
 
             <div className="grid gap-5 sm:grid-cols-2">
 
+              {/* COUNTRY */}
+
+              <div className="sm:col-span-2">
+
+                <span className="mb-2 block text-sm font-medium">
+                  Country *
+                </span>
+
+                <div className="flex items-center gap-3 rounded-xl border bg-gray-50 px-4 py-3">
+
+                  <Globe2
+                    size={18}
+                    className="text-gray-500"
+                  />
+
+                  <span className="font-medium">
+                    {countryName}
+                  </span>
+
+                  <span className="ml-auto text-xs font-semibold text-blue-600">
+                    {currency}
+                  </span>
+
+                </div>
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Change your country from the selector in the navigation bar.
+                </p>
+
+              </div>
+
+              {/* FULL NAME */}
+
               <label className="sm:col-span-2">
 
                 <span className="mb-2 block text-sm font-medium">
@@ -456,6 +551,8 @@ export default function Checkout() {
                 />
 
               </label>
+
+              {/* EMAIL */}
 
               <label>
 
@@ -482,6 +579,8 @@ export default function Checkout() {
 
               </label>
 
+              {/* PHONE */}
+
               <label>
 
                 <span className="mb-2 block text-sm font-medium">
@@ -506,6 +605,8 @@ export default function Checkout() {
                 />
 
               </label>
+
+              {/* ADDRESS LINE 1 */}
 
               <label className="sm:col-span-2">
 
@@ -532,6 +633,8 @@ export default function Checkout() {
 
               </label>
 
+              {/* ADDRESS LINE 2 */}
+
               <label className="sm:col-span-2">
 
                 <span className="mb-2 block text-sm font-medium">
@@ -557,6 +660,8 @@ export default function Checkout() {
 
               </label>
 
+              {/* CITY */}
+
               <label>
 
                 <span className="mb-2 block text-sm font-medium">
@@ -580,37 +685,9 @@ export default function Checkout() {
                   className="w-full rounded-xl border px-4 py-3 outline-none transition focus:border-black"
                 />
 
-                <label className="sm:col-span-2">
-
-                    <span className="mb-2 block text-sm font-medium">
-                        Delivery Area *
-                    </span>
-
-                    <select
-                        value={deliveryZone}
-                        onChange={(event) =>
-                        setDeliveryZone(
-                            event.target.value as DeliveryZone
-                        )
-                        }
-                        className="w-full rounded-xl border bg-white px-4 py-3 outline-none transition focus:border-black"
-                    >
-                        <option value="colombo">
-                        Colombo District — Rs. 350
-                        </option>
-
-                        <option value="outside-colombo">
-                        Outside Colombo District — Rs. 500
-                        </option>
-                    </select>
-
-                    <p className="mt-2 text-xs text-gray-500">
-                        Delivery charges are based on the selected delivery area.
-                    </p>
-
-                    </label>
-
               </label>
+
+              {/* POSTAL CODE */}
 
               <label>
 
@@ -636,6 +713,87 @@ export default function Checkout() {
                 />
 
               </label>
+
+              {/* =====================================
+                  SRI LANKA DELIVERY AREA
+              ===================================== */}
+
+              {isSriLanka && (
+                <label className="sm:col-span-2">
+
+                  <span className="mb-2 block text-sm font-medium">
+                    Delivery Area *
+                  </span>
+
+                  <select
+                    value={
+                      deliveryZone
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setDeliveryZone(
+                        event.target
+                          .value as DeliveryZone
+                      )
+                    }
+                    className="w-full rounded-xl border bg-white px-4 py-3 outline-none transition focus:border-black"
+                  >
+
+                    <option value="colombo">
+                      Colombo District —{" "}
+                      {formatPrice(
+                        getDeliveryFee(
+                          "colombo"
+                        )
+                      )}
+                    </option>
+
+                    <option value="outside-colombo">
+                      Outside Colombo District —{" "}
+                      {formatPrice(
+                        getDeliveryFee(
+                          "outside-colombo"
+                        )
+                      )}
+                    </option>
+
+                  </select>
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    Delivery charges are based on the selected delivery area.
+                  </p>
+
+                </label>
+              )}
+
+              {/* =====================================
+                  INTERNATIONAL DELIVERY
+              ===================================== */}
+
+              {!isSriLanka && (
+                <div className="sm:col-span-2 rounded-xl border border-blue-100 bg-blue-50 p-4">
+
+                  <p className="font-semibold text-blue-900">
+                    International Delivery
+                  </p>
+
+                  <p className="mt-1 text-sm leading-6 text-blue-700">
+                    Shipping to{" "}
+                    {countryName}{" "}
+                    is currently estimated at{" "}
+                    <strong>
+                      {formatPrice(
+                        INTERNATIONAL_DELIVERY_FEE
+                      )}
+                    </strong>
+                    {" "}for this demo.
+                  </p>
+
+                </div>
+              )}
+
+              {/* ORDER NOTES */}
 
               <label className="sm:col-span-2">
 
@@ -719,11 +877,10 @@ export default function Checkout() {
                     </p>
 
                     <p className="mt-2 text-sm font-semibold">
-                      Rs.{" "}
-                      {(
+                      {formatPrice(
                         item.unitPrice *
-                        item.quantity
-                      ).toLocaleString()}
+                          item.quantity
+                      )}
                     </p>
 
                   </div>
@@ -743,22 +900,26 @@ export default function Checkout() {
               </span>
 
               <span>
-                Rs.{" "}
-                {subtotal.toLocaleString()}
+                {formatPrice(
+                  subtotal
+                )}
               </span>
 
             </div>
 
-            <div className="mt-3 flex justify-between">
+            <div className="mt-3 flex justify-between gap-4">
 
-                <span className="text-gray-600">
-                    Delivery
-                </span>
+              <span className="text-gray-600">
+                {isSriLanka
+                  ? "Delivery"
+                  : "International Delivery"}
+              </span>
 
-                <span>
-                    Rs.{" "}
-                    {deliveryFee.toLocaleString()}
-                </span>
+              <span className="text-right">
+                {formatPrice(
+                  deliveryFee
+                )}
+              </span>
 
             </div>
 
@@ -769,14 +930,19 @@ export default function Checkout() {
               </span>
 
               <span className="text-2xl font-black">
-                Rs.{" "}
-                {total.toLocaleString()}
+                {formatPrice(
+                  total
+                )}
               </span>
 
             </div>
 
-            <p className="mt-3 text-xs text-gray-500">
-                Delivery charges are calculated based on your delivery area.
+            <p className="mt-3 text-xs leading-5 text-gray-500">
+
+              {isSriLanka
+                ? "Delivery charges are calculated based on your selected delivery area."
+                : `International delivery to ${countryName} is using an estimated demo rate.`}
+
             </p>
 
           </div>

@@ -190,18 +190,26 @@ export default function Sidebar({
             >
 
               <span
-                className={`h-6 w-6 shrink-0 rounded-full border ${
+              className="h-6 w-6 shrink-0 rounded-full border border-gray-300"
+              style={{
+                backgroundColor:
                   color === "white"
-                    ? "bg-white"
+                    ? "#ffffff"
+                    : color === "off-white"
+                    ? "#eee9df"
                     : color === "black"
-                    ? "bg-black"
+                    ? "#000000"
                     : color === "navy"
-                    ? "bg-blue-900"
+                    ? "#172554"
                     : color === "red"
-                    ? "bg-red-600"
-                    : "bg-green-600"
-                }`}
-              />
+                    ? "#dc2626"
+                    : color === "green"
+                    ? "#16a34a"
+                    : color === "brown"
+                    ? "#8b5e3c"
+                    : "#d1d5db",
+              }}
+            />
 
               <span className="capitalize text-sm font-medium">
                 {color}

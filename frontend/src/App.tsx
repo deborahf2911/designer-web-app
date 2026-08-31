@@ -8,12 +8,18 @@ import {
   CartProvider,
 } from "./contexts/CartContext";
 
+import {
+  RegionProvider,
+} from "./contexts/RegionContext";
+
 export default function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <AppRoutes />
-      </CartProvider>
+      <RegionProvider>
+        <CartProvider>
+          <AppRoutes />
+        </CartProvider>
+      </RegionProvider>
     </AuthProvider>
   );
 }

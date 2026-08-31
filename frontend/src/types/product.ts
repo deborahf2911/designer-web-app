@@ -3,8 +3,11 @@ import type { ProductView } from "./designer";
 
 export type ProductType =
   | "tshirt"
-  | "hoodie"
+  | "oversized-tshirt"
   | "polo"
+  | "hoodie"
+  | "zip-hoodie"
+  | "oversized-hoodie"
   | "cap"
   | "mug"
   | "tote";

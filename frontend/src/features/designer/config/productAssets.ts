@@ -10,6 +10,10 @@ import type {
   ProductType,
 } from "../../../types/product";
 
+// =========================================================
+// CLASSIC T-SHIRT
+// =========================================================
+
 import frontWhite from "../../../assets/products/tshirt/white/front.png";
 import backWhite from "../../../assets/products/tshirt/white/back.png";
 import leftWhite from "../../../assets/products/tshirt/white/left.png";
@@ -35,6 +39,35 @@ import backGreen from "../../../assets/products/tshirt/green/back.png";
 import leftGreen from "../../../assets/products/tshirt/green/left.png";
 import rightGreen from "../../../assets/products/tshirt/green/right.png";
 
+// =========================================================
+// POLO
+// =========================================================
+
+import poloFrontWhite from "../../../assets/products/polo/white/front.png";
+import poloBackWhite from "../../../assets/products/polo/white/back.png";
+import poloLeftWhite from "../../../assets/products/polo/white/left.png";
+import poloRightWhite from "../../../assets/products/polo/white/right.png";
+
+import poloFrontBlack from "../../../assets/products/polo/black/front.png";
+import poloBackBlack from "../../../assets/products/polo/black/back.png";
+import poloLeftBlack from "../../../assets/products/polo/black/left.png";
+import poloRightBlack from "../../../assets/products/polo/black/right.png";
+
+import poloFrontGreen from "../../../assets/products/polo/green/front.png";
+import poloBackGreen from "../../../assets/products/polo/green/back.png";
+import poloLeftGreen from "../../../assets/products/polo/green/left.png";
+import poloRightGreen from "../../../assets/products/polo/green/right.png";
+
+// =========================================================
+// OVERSIZED T-SHIRT
+// =========================================================
+
+import oversizedTshirtFrontWhite from "../../../assets/products/oversized-tshirt/white/front.png";
+
+// =========================================================
+// CLASSIC HOODIE
+// =========================================================
+
 import hoodieFrontWhite from "../../../assets/products/hoodie/white/front.png";
 import hoodieBackWhite from "../../../assets/products/hoodie/white/back.png";
 import hoodieLeftWhite from "../../../assets/products/hoodie/white/left.png";
@@ -50,20 +83,29 @@ import hoodieBackBrown from "../../../assets/products/hoodie/brown/back.png";
 import hoodieLeftBrown from "../../../assets/products/hoodie/brown/left.png";
 import hoodieRightBrown from "../../../assets/products/hoodie/brown/right.png";
 
-// import hoodieFrontNavy from "../../../assets/products/hoodie/navy/front.png";
-// import hoodieBackNavy from "../../../assets/products/hoodie/navy/back.png";
-// import hoodieLeftNavy from "../../../assets/products/hoodie/navy/left.png";
-// import hoodieRightNavy from "../../../assets/products/hoodie/navy/right.png";
-
-// import hoodieFrontRed from "../../../assets/products/hoodie/red/front.png";
-// import hoodieBackRed from "../../../assets/products/hoodie/red/back.png";
-// import hoodieLeftRed from "../../../assets/products/hoodie/red/left.png";
-// import hoodieRightRed from "../../../assets/products/hoodie/red/right.png";
-
 import hoodieFrontGreen from "../../../assets/products/hoodie/green/front.png";
 import hoodieBackGreen from "../../../assets/products/hoodie/green/back.png";
 import hoodieLeftGreen from "../../../assets/products/hoodie/green/left.png";
 import hoodieRightGreen from "../../../assets/products/hoodie/green/right.png";
+
+// =========================================================
+// ZIP HOODIE
+// =========================================================
+
+import zipHoodieFrontWhite from "../../../assets/products/zip-hoodie/white/front.png";
+
+// =========================================================
+// OVERSIZED HOODIE
+// =========================================================
+
+import oversizedHoodieFrontOffWhite from "../../../assets/products/oversized-hoodie/off-white/front.png";
+import oversizedHoodieBackOffWhite from "../../../assets/products/oversized-hoodie/off-white/back.png";
+import oversizedHoodieLeftOffWhite from "../../../assets/products/oversized-hoodie/off-white/left.png";
+import oversizedHoodieRightOffWhite from "../../../assets/products/oversized-hoodie/off-white/right.png";
+
+// =========================================================
+// CAP
+// =========================================================
 
 import whiteCapFront from "../../../assets/products/cap/white/front.png";
 import whiteCapBack from "../../../assets/products/cap/white/back.png";
@@ -74,6 +116,10 @@ import blackCapFront from "../../../assets/products/cap/black/front.png";
 import blackCapBack from "../../../assets/products/cap/black/back.png";
 import blackCapLeft from "../../../assets/products/cap/black/left.png";
 import blackCapRight from "../../../assets/products/cap/black/right.png";
+
+// =========================================================
+// TYPE
+// =========================================================
 
 type ProductAssetConfig =
   Partial<
@@ -93,88 +139,151 @@ type ProductAssetConfig =
     >
   >;
 
+// =========================================================
+// PRODUCT ASSETS
+// =========================================================
+
 export const productAssets:
   ProductAssetConfig = {
+
+    // =====================================================
+    // CLASSIC T-SHIRT
+    // =====================================================
+
     tshirt: {
-        white: {
-          front: frontWhite,
-          back: backWhite,
-          left: leftWhite,
-          right: rightWhite,
-        },
+      white: {
+        front: frontWhite,
+        back: backWhite,
+        left: leftWhite,
+        right: rightWhite,
+      },
 
-        black: {
-          front: frontBlack,
-          back: backBlack,
-          left: leftBlack,
-          right: rightBlack,
-        },
+      black: {
+        front: frontBlack,
+        back: backBlack,
+        left: leftBlack,
+        right: rightBlack,
+      },
 
-        navy: {
-          front: frontNavy,
-          back: backNavy,
-          left: leftNavy,
-          right: rightNavy,
-        },
+      navy: {
+        front: frontNavy,
+        back: backNavy,
+        left: leftNavy,
+        right: rightNavy,
+      },
 
-        red: {
-          front: frontRed,
-          back: backRed,
-          left: leftRed,
-          right: rightRed,
-        },
+      red: {
+        front: frontRed,
+        back: backRed,
+        left: leftRed,
+        right: rightRed,
+      },
 
-        green: {
-          front: frontGreen,
-          back: backGreen,
-          left: leftGreen,
-          right: rightGreen,
-        },
+      green: {
+        front: frontGreen,
+        back: backGreen,
+        left: leftGreen,
+        right: rightGreen,
+      },
     },
+
+    // =====================================================
+    // POLO
+    // =====================================================
+
+    polo: {
+      white: {
+        front: poloFrontWhite,
+        back: poloBackWhite,
+        left: poloLeftWhite,
+        right: poloRightWhite,
+      },
+
+      black: {
+        front: poloFrontBlack,
+        back: poloBackBlack,
+        left: poloLeftBlack,
+        right: poloRightBlack,
+      },
+
+      green: {
+        front: poloFrontGreen,
+        back: poloBackGreen,
+        left: poloLeftGreen,
+        right: poloRightGreen,
+      },
+    },
+
+    // =====================================================
+    // OVERSIZED T-SHIRT
+    // =====================================================
+
+    "oversized-tshirt": {
+      white: {
+        front: oversizedTshirtFrontWhite,
+      },
+    },
+
+    // =====================================================
+    // CLASSIC HOODIE
+    // =====================================================
 
     hoodie: {
-        white: {
-          front: hoodieFrontWhite,
-          back: hoodieBackWhite,
-          left: hoodieLeftWhite,
-          right: hoodieRightWhite,
-        },
+      white: {
+        front: hoodieFrontWhite,
+        back: hoodieBackWhite,
+        left: hoodieLeftWhite,
+        right: hoodieRightWhite,
+      },
 
-        black: {
-          front: hoodieFrontBlack,
-          back: hoodieBackBlack,
-          left: hoodieLeftBlack,
-          right: hoodieRightBlack,
-        },
+      black: {
+        front: hoodieFrontBlack,
+        back: hoodieBackBlack,
+        left: hoodieLeftBlack,
+        right: hoodieRightBlack,
+      },
 
-        brown: {
-          front: hoodieFrontBlack,
-          back: hoodieBackBlack,
-          left: hoodieLeftBlack,
-          right: hoodieRightBlack,
-        },
+      brown: {
+        front: hoodieFrontBrown,
+        back: hoodieBackBrown,
+        left: hoodieLeftBrown,
+        right: hoodieRightBrown,
+      },
 
-        // navy: {
-        // front: hoodieFrontNavy,
-        // back: hoodieBackNavy,
-        // left: hoodieLeftNavy,
-        // right: hoodieRightNavy,
-        // },
-
-        // red: {
-        // front: hoodieFrontRed,
-        // back: hoodieBackRed,
-        // left: hoodieLeftRed,
-        // right: hoodieRightRed,
-        // },
-
-        green: {
-          front: hoodieFrontGreen,
-          back: hoodieBackGreen,
-          left: hoodieLeftGreen,
-          right: hoodieRightGreen,
-        },
+      green: {
+        front: hoodieFrontGreen,
+        back: hoodieBackGreen,
+        left: hoodieLeftGreen,
+        right: hoodieRightGreen,
+      },
     },
+
+    // =====================================================
+    // ZIP HOODIE
+    // =====================================================
+
+    "zip-hoodie": {
+      white: {
+        front: zipHoodieFrontWhite,
+      },
+    },
+
+    // =====================================================
+    // OVERSIZED HOODIE
+    // =====================================================
+
+    "oversized-hoodie": {
+      "off-white": {
+        front: oversizedHoodieFrontOffWhite,
+        back: oversizedHoodieBackOffWhite,
+        left: oversizedHoodieLeftOffWhite,
+        right: oversizedHoodieRightOffWhite,
+      },
+    },
+
+    // =====================================================
+    // CAP
+    // =====================================================
 
     cap: {
       white: {

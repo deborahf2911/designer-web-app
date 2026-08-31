@@ -15,11 +15,20 @@ import {
 
 import {
   shopProducts,
+  type ShopProduct as ShopProductType,
 } from "../../data/shopProducts";
 
 import {
   useCart,
 } from "../../contexts/CartContext";
+
+import {
+  useRegion,
+} from "../../contexts/RegionContext";
+
+// =========================================================
+// PAGE
+// =========================================================
 
 export default function ShopProduct() {
   const {
@@ -30,23 +39,24 @@ export default function ShopProduct() {
   const navigate =
     useNavigate();
 
-  const {
-    addItem,
-  } =
-    useCart();
-
   const product =
     shopProducts.find(
-      (item) =>
+      (
+        item
+      ) =>
         item.id ===
-        Number(productId)
+        Number(
+          productId
+        )
     );
 
-  // =========================================
+  // =======================================================
   // PRODUCT NOT FOUND
-  // =========================================
+  // =======================================================
 
-  if (!product) {
+  if (
+    !product
+  ) {
     return (
       <main className="min-h-screen bg-gray-50">
 
@@ -74,16 +84,49 @@ export default function ShopProduct() {
     );
   }
 
-  // =========================================
+  return (
+    <ShopProductContent
+      product={
+        product
+      }
+    />
+  );
+}
+
+// =========================================================
+// PRODUCT CONTENT
+// =========================================================
+
+function ShopProductContent({
+  product,
+}: {
+  product: ShopProductType;
+}) {
+  const navigate =
+    useNavigate();
+
+  const {
+    addItem,
+  } =
+    useCart();
+
+    const {
+    formatPrice,
+  } =
+    useRegion();
+
+  // =======================================================
   // STATE
-  // =========================================
+  // =======================================================
 
   const [
     selectedColor,
     setSelectedColor,
   ] =
     useState(
-      product.colors[0]
+      product.colors[
+        0
+      ]
     );
 
   const [
@@ -91,7 +134,9 @@ export default function ShopProduct() {
     setSelectedSize,
   ] =
     useState(
-      product.sizes[0] ??
+      product.sizes[
+        0
+      ] ??
         ""
     );
 
@@ -99,80 +144,104 @@ export default function ShopProduct() {
     quantity,
     setQuantity,
   ] =
-    useState(1);
+    useState(
+      1
+    );
 
-  // =========================================
+  // =======================================================
+  // SELECTED VARIANT
+  // =======================================================
+
+  const selectedVariant =
+    product.variants.find(
+      (
+        variant
+      ) =>
+        variant.color ===
+        selectedColor
+    ) ??
+    product.variants[
+      0
+    ];
+
+  const selectedImage =
+    selectedVariant?.image ??
+    product.image;
+
+  // =======================================================
   // ADD TO CART
-  // =========================================
+  // =======================================================
 
   function handleAddToCart() {
-    if (!product) {
-        return;
-    }
-
     const cartItem = {
-        id:
+      id:
         crypto.randomUUID(),
 
-        productId:
+      productId:
         product.id,
 
-        productName:
+      productName:
         product.name,
 
-        productImage:
-        product.image,
+      productImage:
+        selectedImage,
 
-        designPreview:
-        product.image,
+      designPreview:
+        selectedImage,
 
-        color:
+      color:
         selectedColor,
 
-        size:
+      size:
         selectedSize,
 
-        quantity,
+      quantity,
 
-        basePrice:
+      basePrice:
         product.price,
 
-        customized:
+      customized:
         false,
 
-        customization: {
+      customization: {
         textCount:
-            0,
+          0,
 
         imageCount:
-            0,
+          0,
 
         premiumFontUsed:
-            false,
-        },
+          false,
+      },
 
-        customizationPrice:
+      customizationPrice:
         0,
 
-        unitPrice:
+      unitPrice:
         product.price,
     };
 
     addItem(
-        cartItem
+      cartItem
     );
 
     navigate(
-        "/cart"
+      "/cart"
     );
-    }
+  }
+
+  // =======================================================
+  // RENDER
+  // =======================================================
 
   return (
     <main className="min-h-screen bg-gray-50">
 
       <div className="mx-auto max-w-7xl px-6 py-12">
 
-        {/* BACK */}
+        {/* =====================================
+            BACK
+        ===================================== */}
 
         <button
           type="button"
@@ -184,7 +253,9 @@ export default function ShopProduct() {
           className="mb-8 flex items-center gap-2 text-sm text-gray-600 transition hover:text-black"
         >
           <ArrowLeft
-            size={18}
+            size={
+              18
+            }
           />
 
           Back to Shop
@@ -200,11 +271,9 @@ export default function ShopProduct() {
 
             <img
               src={
-                product.image
+                selectedImage
               }
-              alt={
-                product.name
-              }
+              alt={`${product.name} - ${selectedColor}`}
               className="max-h-[500px] w-full object-contain"
             />
 
@@ -233,8 +302,9 @@ export default function ShopProduct() {
             </p>
 
             <p className="mt-6 text-3xl font-black">
-              Rs.{" "}
-              {product.price.toLocaleString()}
+              {formatPrice(
+                product.price
+              )}
             </p>
 
             {/* =====================================
@@ -252,7 +322,9 @@ export default function ShopProduct() {
                 <div className="mt-3 flex flex-wrap gap-3">
 
                   {product.colors.map(
-                    (color) => (
+                    (
+                      color
+                    ) => (
 
                       <button
                         key={
@@ -299,7 +371,9 @@ export default function ShopProduct() {
                 <div className="mt-3 flex flex-wrap gap-3">
 
                   {product.sizes.map(
-                    (size) => (
+                    (
+                      size
+                    ) => (
 
                       <button
                         key={
@@ -358,6 +432,7 @@ export default function ShopProduct() {
                     )
                   }
                   className="p-3 transition hover:bg-gray-100"
+                  aria-label="Decrease quantity"
                 >
                   <Minus
                     size={
@@ -384,6 +459,7 @@ export default function ShopProduct() {
                     )
                   }
                   className="p-3 transition hover:bg-gray-100"
+                  aria-label="Increase quantity"
                 >
                   <Plus
                     size={
@@ -409,11 +485,10 @@ export default function ShopProduct() {
                 </span>
 
                 <span className="text-2xl font-black">
-                  Rs.{" "}
-                  {(
+                  {formatPrice(
                     product.price *
-                    quantity
-                  ).toLocaleString()}
+                      quantity
+                  )}
                 </span>
 
               </div>

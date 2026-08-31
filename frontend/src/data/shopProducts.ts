@@ -2,10 +2,24 @@ import type {
   ProductColor,
 } from "../types/productColor";
 
-import tshirtImage from "../assets/products/tshirt/white/front.png";
-import hoodieImage from "../assets/images/categories/hoodie.jpg";
-import capImage from "../assets/images/categories/cap.jpg";
-import mugImage from "../assets/images/categories/mug.jpg";
+import tshirtWhite from "../assets/products/tshirt/white/front.png";
+import tshirtBlack from "../assets/products/tshirt/black/front.png";
+
+import hoodieBlack from "../assets/products/hoodie/black/front.png";
+import hoodieRed from "../assets/products/hoodie/brown/front.png";
+
+import capBlack from "../assets/products/cap/black/front.png";
+import capNavy from "../assets/products/cap/black/front.png";
+
+import mugWhite from "../assets/images/categories/mug.jpg";
+
+export interface ShopProductVariant {
+  color: ProductColor;
+
+  image: string;
+
+  gallery: string[];
+}
 
 export interface ShopProduct {
   id: number;
@@ -35,6 +49,8 @@ export interface ShopProduct {
   customizable: false;
 
   badge?: string;
+
+  variants: ShopProductVariant[];
 }
 
 export const shopProducts: ShopProduct[] = [
@@ -47,13 +63,14 @@ export const shopProducts: ShopProduct[] = [
     description:
       "Ready-made Kingdom Threads premium graphic T-shirt.",
 
-    price: 2490,
+    price:
+      2490,
 
     image:
-      tshirtImage,
+      tshirtWhite,
 
     gallery: [
-      tshirtImage,
+      tshirtWhite,
     ],
 
     category:
@@ -76,6 +93,32 @@ export const shopProducts: ShopProduct[] = [
 
     badge:
       "Best Seller",
+
+    variants: [
+      {
+        color:
+          "white",
+
+        image:
+          tshirtWhite,
+
+        gallery: [
+          tshirtWhite,
+        ],
+      },
+
+      {
+        color:
+          "black",
+
+        image:
+          tshirtBlack,
+
+        gallery: [
+          tshirtBlack,
+        ],
+      },
+    ],
   },
 
   {
@@ -87,13 +130,14 @@ export const shopProducts: ShopProduct[] = [
     description:
       "Premium ready-made hoodie from the Kingdom Threads collection.",
 
-    price: 5990,
+    price:
+      5990,
 
     image:
-      hoodieImage,
+      hoodieBlack,
 
     gallery: [
-      hoodieImage,
+      hoodieBlack,
     ],
 
     category:
@@ -116,6 +160,32 @@ export const shopProducts: ShopProduct[] = [
 
     badge:
       "New",
+
+    variants: [
+      {
+        color:
+          "black",
+
+        image:
+          hoodieBlack,
+
+        gallery: [
+          hoodieBlack,
+        ],
+      },
+
+      {
+        color:
+          "red",
+
+        image:
+          hoodieRed,
+
+        gallery: [
+          hoodieRed,
+        ],
+      },
+    ],
   },
 
   {
@@ -127,13 +197,14 @@ export const shopProducts: ShopProduct[] = [
     description:
       "Ready-to-order premium cap with Kingdom Threads styling.",
 
-    price: 1990,
+    price:
+      1990,
 
     image:
-      capImage,
+      capBlack,
 
     gallery: [
-      capImage,
+      capBlack,
     ],
 
     category:
@@ -153,6 +224,32 @@ export const shopProducts: ShopProduct[] = [
 
     badge:
       "Popular",
+
+    variants: [
+      {
+        color:
+          "black",
+
+        image:
+          capBlack,
+
+        gallery: [
+          capBlack,
+        ],
+      },
+
+      {
+        color:
+          "navy",
+
+        image:
+          capNavy,
+
+        gallery: [
+          capNavy,
+        ],
+      },
+    ],
   },
 
   {
@@ -164,13 +261,14 @@ export const shopProducts: ShopProduct[] = [
     description:
       "Ready-made ceramic mug from the Kingdom Threads collection.",
 
-    price: 1290,
+    price:
+      1290,
 
     image:
-      mugImage,
+      mugWhite,
 
     gallery: [
-      mugImage,
+      mugWhite,
     ],
 
     category:
@@ -189,5 +287,19 @@ export const shopProducts: ShopProduct[] = [
 
     badge:
       "Trending",
+
+    variants: [
+      {
+        color:
+          "white",
+
+        image:
+          mugWhite,
+
+        gallery: [
+          mugWhite,
+        ],
+      },
+    ],
   },
 ];
