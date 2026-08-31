@@ -247,6 +247,8 @@ The application is designed around several security boundaries:
 
 Current development work includes:
 
+- Building a secure admin dashboard for order management
+- Adding order status workflows for processing and fulfilment
 - Expanding customizable product mockups and variants
 - Improving responsive behavior across the customization experience
 - Optimizing product assets and application bundle size
